@@ -1,13 +1,8 @@
-package examplefuncsplayer;
+package prisms10.prototype;
 
 import battlecode.common.*;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
 /**
  * RobotPlayer is the class that describes your main robot strategy.
@@ -30,18 +25,6 @@ public strictfp class RobotPlayer {
      * we get the same sequence of numbers every time this code is run. This is very useful for debugging!
      */
     static final Random rng = new Random(6147);
-
-    /** Array containing all the possible movement directions. */
-    static final Direction[] directions = {
-        Direction.NORTH,
-        Direction.NORTHEAST,
-        Direction.EAST,
-        Direction.SOUTHEAST,
-        Direction.SOUTH,
-        Direction.SOUTHWEST,
-        Direction.WEST,
-        Direction.NORTHWEST,
-    };
 
     /**
      * run() is the method that is called when a robot is instantiated in the Battlecode world.
@@ -102,13 +85,80 @@ public strictfp class RobotPlayer {
         // Your code should never reach here (unless it's intentional)! Self-destruction imminent...
     }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    /*** static functions and constants ***/
+    // constants
+    static final Direction[][] DIRECTION_MAP = new Direction[][] {
+            {Direction.SOUTHWEST, Direction.SOUTH, Direction.SOUTHEAST},
+            {Direction.WEST, Direction.CENTER, Direction.EAST},
+            {Direction.NORTHWEST, Direction.NORTH, Direction.NORTHEAST}
+    };
+    // helper functions
+    static MapLocation intToLoc(short number) {
+        return new MapLocation((number & 0x3F80) >> 7, number & 0x007F);
+    }
+    static short locToInt(MapLocation location, ResourceType type) {
+        return (short) ((type.resourceID << 14) + (location.x << 7) + location.y);
+    }
+    static short locToInt(MapLocation location) {
+        return (short) ((location.x << 7) + location.y);
+    }
+    static Direction toDirection(int dx, int dy) {
+        return DIRECTION_MAP[sign(dy) + 1][sign(dx) + 1];
+    }
+    static int sign(int x) {
+        return Integer.compare(x, 0);
+    }
+
+    static final short LOCATION_DEFAULT = 0x3FFF;
+
+    // the first few robots the headquarters will build
+    static final RobotType[] initialRobots = new RobotType[] {
+            RobotType.CARRIER, RobotType.LAUNCHER
+    };
+
+    /*** local variables kept by each robot ***/
+    static Set<Short> locationsToWrite = new HashSet<>(); // Every important location that is scheduled to record into shared memory
+    static MapLocation bindTo = null;                     // An important location (such as a well) that the robot is bound to
+    static int state;                                     // Current state of robot. Its meaning depends on the type of robot
+
     /**
      * Run a single turn for a Headquarters.
      * This code is wrapped inside the infinite loop in run(), so it is called once per turn.
      */
     static void runHeadquarters(RobotController rc) throws GameActionException {
+        // initialize
+        if((rc.readSharedArray(63) & 0x8000) == 0) {
+            rc.writeSharedArray(63, 0x8000);
+            // initialize shared memory
+            for(int i = 0; i < 20; i++) {
+                rc.writeSharedArray(i, LOCATION_DEFAULT);
+            }
+            // initialize nearby well info
+            WellInfo[] wells = rc.senseNearbyWells();
+            for(WellInfo well : wells) {
+                short s = locToInt(well.getMapLocation(), well.getResourceType());
+                boolean toWrite = true;
+                for(int i = 0; i < 16; i++) {
+                    if(s == rc.readSharedArray(i)) {
+                        toWrite = false;
+                        break;
+                    }
+                }
+                if(toWrite) {
+                    locationsToWrite.add(s);
+                }
+            }
+        }
+        for(int i = 16; i < 20; i++) {
+            if(rc.readSharedArray(i) == LOCATION_DEFAULT) {
+                rc.writeSharedArray(i, locToInt(rc.getLocation()));
+                break;
+            }
+        }
         // Pick a direction to build in.
-        Direction dir = directions[rng.nextInt(directions.length)];
+        Direction dir = Direction.values()[rng.nextInt(Direction.values().length)];
         MapLocation newLoc = rc.getLocation().add(dir);
         if (rc.canBuildAnchor(Anchor.STANDARD)) {
             // If we can build an anchor do it!
@@ -135,67 +185,70 @@ public strictfp class RobotPlayer {
      * This code is wrapped inside the infinite loop in run(), so it is called once per turn.
      */
     static void runCarrier(RobotController rc) throws GameActionException {
-        if (rc.getAnchor() != null) {
-            // If I have an anchor singularly focus on getting it to the first island I see
-            int[] islands = rc.senseNearbyIslands();
-            Set<MapLocation> islandLocs = new HashSet<>();
-            for (int id : islands) {
-                MapLocation[] thisIslandLocs = rc.senseNearbyIslandLocations(id);
-                islandLocs.addAll(Arrays.asList(thisIslandLocs));
-            }
-            if (islandLocs.size() > 0) {
-                MapLocation islandLocation = islandLocs.iterator().next();
-                rc.setIndicatorString("Moving my anchor towards " + islandLocation);
-                while (!rc.getLocation().equals(islandLocation)) {
-                    Direction dir = rc.getLocation().directionTo(islandLocation);
-                    if (rc.canMove(dir)) {
-                        rc.move(dir);
-                    }
-                }
-                if (rc.canPlaceAnchor()) {
-                    rc.setIndicatorString("Huzzah, placed anchor!");
-                    rc.placeAnchor();
-                }
-            }
-        }
-        // Try to gather from squares around us.
-        MapLocation me = rc.getLocation();
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dy = -1; dy <= 1; dy++) {
-                MapLocation wellLocation = new MapLocation(me.x + dx, me.y + dy);
-                if (rc.canCollectResource(wellLocation, -1)) {
-                    if (rng.nextBoolean()) {
-                        rc.collectResource(wellLocation, -1);
-                        rc.setIndicatorString("Collecting, now have, AD:" + 
-                            rc.getResourceAmount(ResourceType.ADAMANTIUM) + 
-                            " MN: " + rc.getResourceAmount(ResourceType.MANA) + 
-                            " EX: " + rc.getResourceAmount(ResourceType.ELIXIR));
-                    }
-                }
-            }
-        }
-        // Occasionally try out the carriers attack
-        if (rng.nextInt(20) == 1) {
-            RobotInfo[] enemyRobots = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
-            if (enemyRobots.length > 0) {
-                if (rc.canAttack(enemyRobots[0].location)) {
-                    rc.attack(enemyRobots[0].location);
-                }
-            }
-        }
-        
-        // If we can see a well, move towards it
+        // record information of observed wells
         WellInfo[] wells = rc.senseNearbyWells();
-        if (wells.length > 1 && rng.nextInt(3) == 1) {
-            WellInfo well_one = wells[1];
-            Direction dir = me.directionTo(well_one.getMapLocation());
-            if (rc.canMove(dir)) 
-                rc.move(dir);
+        for(WellInfo well : wells) {
+            short s = locToInt(well.getMapLocation(), well.getResourceType());
+            boolean toWrite = true;
+            for(int i = 0; i < 16; i++) {
+                if(s == rc.readSharedArray(i)) {
+                    toWrite = false;
+                    break;
+                }
+            }
+            if(toWrite) {
+                locationsToWrite.add(s);
+            }
         }
-        // Also try to move randomly.
-        Direction dir = directions[rng.nextInt(directions.length)];
-        if (rc.canMove(dir)) {
-            rc.move(dir);
+        // update current state
+        if(state != 3 && rc.getWeight() <= 0) {
+            state = (rc.getNumAnchors(Anchor.STANDARD) + rc.getNumAnchors(Anchor.ACCELERATING) > 0)? 1: 0;
+            rc.setIndicatorString("current state: " + state);
+        } else if(state != 3 && rc.getWeight() >= 40) {
+            state = 2;
+            rc.setIndicatorString("current state: " + state);
+        }
+        // perform an operation according to its state
+        switch(state) {
+            case 0:
+                if(bindTo == null) {
+                    for(int i = 0; i < 8; i++) {
+                        if(rc.readSharedArray(i) != LOCATION_DEFAULT) {
+                        }
+                    }
+                }
+                rc.setIndicatorString("Targeting to " + bindTo.x + ", " + bindTo.y);
+                MapLocation current = rc.getLocation();
+                if(rc.canCollectResource(bindTo, -1)) {
+                    // if can collect resource, collect
+                    rc.collectResource(bindTo, -1);
+                } else {
+                    // otherwise, move toward the destination
+                    Direction direction = toDirection(bindTo.x - current.x, bindTo.y - current.y);
+                    if(rc.canMove(direction)) {
+                        rc.move(direction);
+                    } else if(rc.canMove(direction.rotateLeft())) {
+                        // if the bot cannot move directly toward the destination, try sideways
+                        rc.move(direction.rotateLeft());
+                    } else if(rc.canMove(direction.rotateRight())) {
+                        rc.move(direction.rotateRight());
+                    }
+                }
+                break;
+            case 1:
+                // TODO
+                break;
+            case 2:
+                break;
+        }
+        // clear up repeated information in locationsToWrite array
+        for(Short location : locationsToWrite) {
+            for(int i = 0; i < 8; i++) {
+                if(rc.readSharedArray(i) == LOCATION_DEFAULT && rc.canWriteSharedArray(i, location)) {
+                    rc.writeSharedArray(i, location);
+                    break;
+                }
+            }
         }
     }
 
@@ -213,13 +266,13 @@ public strictfp class RobotPlayer {
             MapLocation toAttack = rc.getLocation().add(Direction.EAST);
 
             if (rc.canAttack(toAttack)) {
-                rc.setIndicatorString("Attacking");        
+                rc.setIndicatorString("Attacking");
                 rc.attack(toAttack);
             }
         }
 
         // Also try to move randomly.
-        Direction dir = directions[rng.nextInt(directions.length)];
+        Direction dir = Direction.values()[rng.nextInt(Direction.values().length)];
         if (rc.canMove(dir)) {
             rc.move(dir);
         }
