@@ -111,6 +111,27 @@ public strictfp class RobotPlayer {
         return Integer.compare(x, 0);
     }
 
+    /**
+     * Scanning all wells around a robot. If found any new well, record it into shared memory
+     * @param rc robot controller
+     */
+    static void scanForWells(RobotController rc) throws GameActionException {
+        WellInfo[] wells = rc.senseNearbyWells();
+        for(WellInfo well : wells) {
+            short s = locToInt(well.getMapLocation(), well.getResourceType());
+            boolean toWrite = true;
+            for(int i = 0; i < 16; i++) {
+                if(s == rc.readSharedArray(i)) {
+                    toWrite = false;
+                    break;
+                }
+            }
+            if(toWrite) {
+                locationsToWrite.add(s);
+            }
+        }
+    }
+
     static final short LOCATION_DEFAULT = 0x3FFF;
 
     // the first few robots the headquarters will build
@@ -186,37 +207,21 @@ public strictfp class RobotPlayer {
      */
     static void runCarrier(RobotController rc) throws GameActionException {
         // record information of observed wells
-        WellInfo[] wells = rc.senseNearbyWells();
-        for(WellInfo well : wells) {
-            short s = locToInt(well.getMapLocation(), well.getResourceType());
-            boolean toWrite = true;
-            for(int i = 0; i < 16; i++) {
-                if(s == rc.readSharedArray(i)) {
-                    toWrite = false;
-                    break;
-                }
-            }
-            if(toWrite) {
-                locationsToWrite.add(s);
-            }
-        }
+        scanForWells(rc);
         // update current state
-        if(state != 3 && rc.getWeight() <= 0) {
-            state = (rc.getNumAnchors(Anchor.STANDARD) + rc.getNumAnchors(Anchor.ACCELERATING) > 0)? 1: 0;
-            rc.setIndicatorString("current state: " + state);
-        } else if(state != 3 && rc.getWeight() >= 40) {
+        if(rc.getNumAnchors(Anchor.STANDARD) + rc.getNumAnchors(Anchor.ACCELERATING) > 0) {
+            state = 1;
+        } else if(rc.getWeight() >= 40) {
             state = 2;
-            rc.setIndicatorString("current state: " + state);
+        } else if(rc.getWeight() <= 0 && bindTo != null) {
+            state = 0;
+        } else if(rc.getWeight() <= 0) {
+            state = 3;
         }
+        rc.setIndicatorString("current state: " + state);
         // perform an operation according to its state
         switch(state) {
             case 0:
-                if(bindTo == null) {
-                    for(int i = 0; i < 8; i++) {
-                        if(rc.readSharedArray(i) != LOCATION_DEFAULT) {
-                        }
-                    }
-                }
                 rc.setIndicatorString("Targeting to " + bindTo.x + ", " + bindTo.y);
                 MapLocation current = rc.getLocation();
                 if(rc.canCollectResource(bindTo, -1)) {
@@ -225,13 +230,18 @@ public strictfp class RobotPlayer {
                 } else {
                     // otherwise, move toward the destination
                     Direction direction = toDirection(bindTo.x - current.x, bindTo.y - current.y);
+                    Direction dirL = direction.rotateLeft(), dirR = direction.rotateRight();
                     if(rc.canMove(direction)) {
                         rc.move(direction);
-                    } else if(rc.canMove(direction.rotateLeft())) {
+                    } else if(rc.canMove(dirL)) {
                         // if the bot cannot move directly toward the destination, try sideways
-                        rc.move(direction.rotateLeft());
-                    } else if(rc.canMove(direction.rotateRight())) {
-                        rc.move(direction.rotateRight());
+                        rc.move(dirL);
+                    } else if(rc.canMove(dirR)) {
+                        rc.move(dirR);
+                    } else if(rc.canMove(dirL.rotateLeft())) {
+                        rc.move(dirL.rotateLeft());
+                    } else if(rc.canMove(dirR.rotateRight())) {
+                        rc.move(dirR.rotateRight());
                     }
                 }
                 break;
@@ -239,6 +249,26 @@ public strictfp class RobotPlayer {
                 // TODO
                 break;
             case 2:
+                break;
+            case 3:
+                if(bindTo == null) {
+                    for(int i = 0; i < 8; i++) {
+                        // find a valid well and set it for target
+                        short pos = (short) rc.readSharedArray(i);
+                        if(pos != LOCATION_DEFAULT) {
+                            bindTo = intToLoc(pos);
+                            break;
+                        }
+                    }
+                }
+                if(bindTo != null) {
+                    state = 0;
+                    break;
+                }
+                Direction dir = Direction.values()[(rng.nextInt() % 8 + 8) % 8];
+                if(rc.canMove(dir)) {
+                    rc.move(dir);
+                }
                 break;
         }
         // clear up repeated information in locationsToWrite array
@@ -257,6 +287,8 @@ public strictfp class RobotPlayer {
      * This code is wrapped inside the infinite loop in run(), so it is called once per turn.
      */
     static void runLauncher(RobotController rc) throws GameActionException {
+        // scan for wells in its observable range
+        scanForWells(rc);
         // Try to attack someone
         int radius = rc.getType().actionRadiusSquared;
         Team opponent = rc.getTeam().opponent();
