@@ -246,7 +246,7 @@ public strictfp class RobotPlayer {
             }
         }
         if (!reached) return -1;
-        if (doMove) return dist[destination.x][destination.y];
+        if (!doMove) return dist[destination.x][destination.y];
         ArrayList<Direction> movPath = new ArrayList<>();
         MapLocation cur = destination;
         while(!cur.equals(start)){
