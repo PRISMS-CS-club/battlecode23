@@ -1,4 +1,4 @@
-# PRISMS 01 robot
+# PRISMS 10 robot
 
 ## Integer format
 
@@ -22,8 +22,8 @@ Special:
 ## Shared Memory Allocation
 
 - integer 0-7: position of every well
-- integer 8-15: position of every sky island
-- integer 16-19: position of every headquarters
+- integer 8-11: position of every headquarters
+- integer 12-47: position of every sky island
 - integer 63: memory status indicator
   - format: `I___ ____ ____ ____`
   - `I`: Whether memory is initialized, either 0 or 1.
@@ -34,9 +34,9 @@ Special:
 
 | number | meaning                              |
 |--------|--------------------------------------|
-| 0      | going from headquarter to well       |
-| 1      | going from headquarter to sky island |
-| 2      | going back to headquarter            |
-| 3      | no target, exploring the map         |
+| 0      | no target, exploring the map         |
+| 1      | going from headquarter to well       |
+| 2      | going from headquarter to sky island |
+| 3      | going back to headquarter            |
 
 ### Launcher

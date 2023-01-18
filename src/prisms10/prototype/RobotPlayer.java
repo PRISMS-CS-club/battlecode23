@@ -108,11 +108,11 @@ public strictfp class RobotPlayer {
     }
 
     static int locToInt(MapLocation location, ResourceType type) {
-        return (int) ((type.resourceID << 14) + (location.x << 7) + location.y);
+        return ((type.resourceID << 14) + (location.x << 7) + location.y);
     }
 
     static int locToInt(MapLocation location) {
-        return (int) ((location.x << 7) + location.y);
+        return ((location.x << 7) + location.y);
     }
 
     static Direction toDirection(int dx, int dy) {
@@ -146,6 +146,10 @@ public strictfp class RobotPlayer {
             if (toWrite) {
                 locationsToWrite.add(s);
             }
+        }
+    }
+    static void scanForSkyIsland(RobotController rc) {
+        for(int islandID : rc.senseNearbyIslands()) {
         }
     }
 
@@ -305,6 +309,8 @@ public strictfp class RobotPlayer {
     static int[][] passable = new int[GameConstants.MAP_MAX_WIDTH][GameConstants.MAP_MAX_HEIGHT];    // What the robot knows about the map (passable)
     // 0 -> cannot pass, 1 can pass, -1 unknown
     static RobotType rType;
+
+
     /**
      * Run a single turn for a Headquarters.
      * This code is wrapped inside the infinite loop in run(), so it is called once per turn.
@@ -314,7 +320,7 @@ public strictfp class RobotPlayer {
         if ((rc.readSharedArray(63) & 0x8000) == 0) {
             rc.writeSharedArray(63, 0x8000);
             // initialize shared memory
-            for (int i = 0; i < 20; i++) {
+            for (int i = 0; i < 48; i++) {
                 rc.writeSharedArray(i, LOCATION_DEFAULT);
             }
             // initialize nearby well info
@@ -322,7 +328,7 @@ public strictfp class RobotPlayer {
         }
         // record the current headquarter's position into shared memory
         int currentLocation = locToInt(rc.getLocation());
-        for (int i = 16; i < 20; i++) {
+        for (int i = 8; i < 11; i++) {
             int data = rc.readSharedArray(i);
             if (data == currentLocation) {
                 // repeated information found in shared memory
@@ -378,20 +384,48 @@ public strictfp class RobotPlayer {
         // record information of observed wells
         scanForWells(rc);
         // update current state
-        if (rc.getNumAnchors(Anchor.STANDARD) + rc.getNumAnchors(Anchor.ACCELERATING) > 0) {
-            state = 1;
-        } else if (rc.getWeight() >= 40 && state != 2) {
-            bindTo = null;
-            state = 2;
-        } else if (rc.getWeight() <= 0 && bindTo != null) {
-            state = 0;
-        } else if (rc.getWeight() <= 0) {
-            state = 3;
-        }
         rc.setIndicatorString("current state: " + state);
         // perform an operation according to its state
         switch (state) {
             case 0:
+                // try to get an anchor
+                if(bindTo != null) {
+                    if(rc.canTakeAnchor(bindTo, Anchor.ACCELERATING)) {
+                        rc.takeAnchor(bindTo, Anchor.ACCELERATING);
+                        bindTo = null;
+                        state = 2;
+                        break;
+                    }
+                    if(rc.canTakeAnchor(bindTo, Anchor.STANDARD)) {
+                        rc.takeAnchor(bindTo, Anchor.STANDARD);
+                        bindTo = null;
+                        state = 2;
+                        break;
+                    }
+                }
+                // try to find a well
+                List<MapLocation> locations = new ArrayList<>();
+                for(int i = 0; i < 8; i++) {
+                    // find a valid well and set it for target
+                    int pos = rc.readSharedArray(i);
+                    if(pos != LOCATION_DEFAULT) {
+                        locations.add(intToLoc(pos));
+                    }
+                }
+                if(locations.size() != 0) {
+                    // if the robot can find a well, target toward the well
+                    bindTo = locations.get(Math.abs(rng.nextInt()) % locations.size());
+                    state = 1;
+                    break;
+                }
+                // if the bot does not find any job, wander randomly
+                Direction dir = Direction.values()[(rng.nextInt() % 8 + 8) % 8];
+                if (rc.canMove(dir)) {
+                    rc.move(dir);
+                }
+                break;
+
+            case 1:
                 rc.setIndicatorString("Targeting to " + bindTo.x + ", " + bindTo.y);
                 MapLocation current = rc.getLocation();
                 if (rc.canCollectResource(bindTo, -1)) {
@@ -399,22 +433,25 @@ public strictfp class RobotPlayer {
                     rc.collectResource(bindTo, -1);
                     if (rc.getWeight() >= 40) {
                         bindTo = null;
+                        state = 3;
                     }
                 } else {
                     // otherwise, move toward the destination
                     moveToward(rc, bindTo);
                 }
                 break;
-            case 1:
+
+            case 2:
                 // TODO
                 break;
-            case 2:
+
+            case 3:
                 if (bindTo == null) {
                     // find the headquarter with the smallest distance
                     int minDist = Integer.MAX_VALUE;
                     MapLocation targetLocation = null;
-                    for (int i = 16; i < 20; i++) {
-                        int read = (int) rc.readSharedArray(i);
+                    for (int i = 8; i < 12; i++) {
+                        int read = rc.readSharedArray(i);
                         if (read != LOCATION_DEFAULT) {
                             MapLocation headquarter = intToLoc(read);
                             int distance = taxicabDistance(headquarter, rc.getLocation());
@@ -426,6 +463,7 @@ public strictfp class RobotPlayer {
                     }
                     bindTo = targetLocation;
                 }
+                // try to transfer every resource back to headquarter
                 boolean transferred = false;          // whether the bot successfully transferred any resource to headquarter
                 for (ResourceType resourceType : ResourceType.values()) {
                     if (rc.canTransferResource(bindTo, resourceType, rc.getResourceAmount(resourceType))) {
@@ -436,28 +474,7 @@ public strictfp class RobotPlayer {
                 if (!transferred) {
                     moveToward(rc, bindTo);
                 } else if (rc.getWeight() <= 0) {
-                    bindTo = null;
-                }
-                break;
-            case 3:
-                if(bindTo == null) {
-                    List<MapLocation> locations = new ArrayList<>();
-                    for(int i = 0; i < 8; i++) {
-                        // find a valid well and set it for target
-                        int pos = (int) rc.readSharedArray(i);
-                        if(pos != LOCATION_DEFAULT) {
-                            locations.add(intToLoc(pos));
-                        }
-                    }
-                    if(locations.size() != 0) {
-                        bindTo = locations.get(Math.abs(rng.nextInt()) % locations.size());
-                        state = 0;
-                        break;
-                    }
-                }
-                Direction dir = Direction.values()[(rng.nextInt() % 8 + 8) % 8];
-                if (rc.canMove(dir)) {
-                    rc.move(dir);
+                    state = 0;
                 }
                 break;
         }
