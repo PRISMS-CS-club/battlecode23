@@ -110,6 +110,9 @@ public strictfp class RobotPlayer {
     static int sign(int x) {
         return Integer.compare(x, 0);
     }
+    static int taxicabDistance(MapLocation loc1, MapLocation loc2) {
+        return Math.abs(loc2.x - loc1.x) + Math.abs(loc2.y - loc1.y);
+    }
 
     /**
      * Scanning all wells around a robot. If found any new well, record it into shared memory
@@ -129,6 +132,30 @@ public strictfp class RobotPlayer {
             if(toWrite) {
                 locationsToWrite.add(s);
             }
+        }
+    }
+
+    /**
+     * Move this robot toward a given position one step.
+     * @param rc robot controller
+     * @param destination destination
+     */
+    static void moveToward(RobotController rc, MapLocation destination) throws GameActionException {
+        // TODO (avoid obstacles)
+        MapLocation current = rc.getLocation();
+        Direction direction = toDirection(destination.x - current.x, destination.y - current.y);
+        Direction dirL = direction.rotateLeft(), dirR = direction.rotateRight();
+        if(rc.canMove(direction)) {
+            rc.move(direction);
+        } else if(rc.canMove(dirL)) {
+            // if the bot cannot move directly toward the destination, try sideways
+            rc.move(dirL);
+        } else if(rc.canMove(dirR)) {
+            rc.move(dirR);
+        } else if(rc.canMove(dirL.rotateLeft())) {
+            rc.move(dirL.rotateLeft());
+        } else if(rc.canMove(dirR.rotateRight())) {
+            rc.move(dirR.rotateRight());
         }
     }
 
@@ -157,24 +184,18 @@ public strictfp class RobotPlayer {
                 rc.writeSharedArray(i, LOCATION_DEFAULT);
             }
             // initialize nearby well info
-            WellInfo[] wells = rc.senseNearbyWells();
-            for(WellInfo well : wells) {
-                short s = locToInt(well.getMapLocation(), well.getResourceType());
-                boolean toWrite = true;
-                for(int i = 0; i < 16; i++) {
-                    if(s == rc.readSharedArray(i)) {
-                        toWrite = false;
-                        break;
-                    }
-                }
-                if(toWrite) {
-                    locationsToWrite.add(s);
-                }
-            }
+            scanForWells(rc);
         }
+        // record the current headquarter's position into shared memory
+        short currentLocation = locToInt(rc.getLocation());
         for(int i = 16; i < 20; i++) {
+            int data = rc.readSharedArray(i);
+            if(data == currentLocation) {
+                // repeated information found in shared memory
+                break;
+            }
             if(rc.readSharedArray(i) == LOCATION_DEFAULT) {
-                rc.writeSharedArray(i, locToInt(rc.getLocation()));
+                rc.writeSharedArray(i, currentLocation);
                 break;
             }
         }
@@ -211,7 +232,8 @@ public strictfp class RobotPlayer {
         // update current state
         if(rc.getNumAnchors(Anchor.STANDARD) + rc.getNumAnchors(Anchor.ACCELERATING) > 0) {
             state = 1;
-        } else if(rc.getWeight() >= 40) {
+        } else if(rc.getWeight() >= 40 && state != 2) {
+            bindTo = null;
             state = 2;
         } else if(rc.getWeight() <= 0 && bindTo != null) {
             state = 0;
@@ -229,26 +251,40 @@ public strictfp class RobotPlayer {
                     rc.collectResource(bindTo, -1);
                 } else {
                     // otherwise, move toward the destination
-                    Direction direction = toDirection(bindTo.x - current.x, bindTo.y - current.y);
-                    Direction dirL = direction.rotateLeft(), dirR = direction.rotateRight();
-                    if(rc.canMove(direction)) {
-                        rc.move(direction);
-                    } else if(rc.canMove(dirL)) {
-                        // if the bot cannot move directly toward the destination, try sideways
-                        rc.move(dirL);
-                    } else if(rc.canMove(dirR)) {
-                        rc.move(dirR);
-                    } else if(rc.canMove(dirL.rotateLeft())) {
-                        rc.move(dirL.rotateLeft());
-                    } else if(rc.canMove(dirR.rotateRight())) {
-                        rc.move(dirR.rotateRight());
-                    }
+                    moveToward(rc, bindTo);
                 }
                 break;
             case 1:
                 // TODO
                 break;
             case 2:
+                if(bindTo == null) {
+                    // find the headquarter with the smallest distance
+                    int minDist = Integer.MAX_VALUE;
+                    MapLocation targetLocation = null;
+                    for(int i = 16; i < 20; i++) {
+                        short read = (short) rc.readSharedArray(i);
+                        if(read != LOCATION_DEFAULT) {
+                            MapLocation headquarter = intToLoc(read);
+                            int distance = taxicabDistance(headquarter, rc.getLocation());
+                            if(distance < minDist) {
+                                minDist = distance;
+                                targetLocation = headquarter;
+                            }
+                        }
+                    }
+                    bindTo = targetLocation;
+                }
+                boolean transferred = false;          // whether the bot successfully transferred any resource to headquarter
+                for(ResourceType resourceType : ResourceType.values()) {
+                    if(rc.canTransferResource(bindTo, resourceType, -1)) {
+                        rc.transferResource(bindTo, resourceType, -1);
+                        transferred = true;
+                    }
+                }
+                if(!transferred) {
+                    moveToward(rc, bindTo);
+                }
                 break;
             case 3:
                 if(bindTo == null) {
