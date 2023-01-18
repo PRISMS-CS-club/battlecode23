@@ -248,6 +248,7 @@ public strictfp class RobotPlayer {
                 prePos.put(nexPos, cur);
             }
         }
+        if (!reached) return -1;
 
         ArrayList<Direction> movPath = new ArrayList<>();
         MapLocation cur = destination;
@@ -262,8 +263,6 @@ public strictfp class RobotPlayer {
                 rc.move(dir);
             }
         }
-        if (!reached) return -1;
-
         return dist[destination.x][destination.y];
     }
 
