@@ -199,6 +199,20 @@ public strictfp class RobotPlayer {
                 break;
             }
         }
+        // produce first few items as scheduled in array `initialRobots`
+        if(state < initialRobots.length) {
+            boolean robotBuilt = false;
+            for(Direction dir : Direction.values()) {
+                if(rc.canBuildRobot(initialRobots[state], rc.getLocation().add(dir))) {
+                    rc.buildRobot(initialRobots[state], rc.getLocation().add(dir));
+                    robotBuilt = true;
+                    break;
+                }
+            }
+            if(robotBuilt) {
+                state++;
+            }
+        }
         // Pick a direction to build in.
         Direction dir = Direction.values()[rng.nextInt(Direction.values().length)];
         MapLocation newLoc = rc.getLocation().add(dir);
@@ -293,18 +307,19 @@ public strictfp class RobotPlayer {
                 break;
             case 3:
                 if(bindTo == null) {
+                    List<MapLocation> locations = new ArrayList<>();
                     for(int i = 0; i < 8; i++) {
                         // find a valid well and set it for target
                         short pos = (short) rc.readSharedArray(i);
                         if(pos != LOCATION_DEFAULT) {
-                            bindTo = intToLoc(pos);
-                            break;
+                            locations.add(intToLoc(pos));
                         }
                     }
-                }
-                if(bindTo != null) {
-                    state = 0;
-                    break;
+                    if(locations.size() != 0) {
+                        bindTo = locations.get(Math.abs(rng.nextInt()) % locations.size());
+                        state = 0;
+                        break;
+                    }
                 }
                 Direction dir = Direction.values()[(rng.nextInt() % 8 + 8) % 8];
                 if(rc.canMove(dir)) {
@@ -315,7 +330,13 @@ public strictfp class RobotPlayer {
         // clear up repeated information in locationsToWrite array
         for(Short location : locationsToWrite) {
             for(int i = 0; i < 8; i++) {
-                if(rc.readSharedArray(i) == LOCATION_DEFAULT && rc.canWriteSharedArray(i, location)) {
+                int before = rc.readSharedArray(i);
+                if(before == location) {
+                    locationsToWrite.remove(location);
+                    break;
+                }
+                if(before == LOCATION_DEFAULT && rc.canWriteSharedArray(i, location)) {
+                    locationsToWrite.remove(location);
                     rc.writeSharedArray(i, location);
                     break;
                 }
@@ -348,6 +369,21 @@ public strictfp class RobotPlayer {
         Direction dir = Direction.values()[rng.nextInt(Direction.values().length)];
         if (rc.canMove(dir)) {
             rc.move(dir);
+        }
+        // clear up repeated information in locationsToWrite array
+        for(Short location : locationsToWrite) {
+            for(int i = 0; i < 8; i++) {
+                int before = rc.readSharedArray(i);
+                if(before == location) {
+                    locationsToWrite.remove(location);
+                    break;
+                }
+                if(before == LOCATION_DEFAULT && rc.canWriteSharedArray(i, location)) {
+                    locationsToWrite.remove(location);
+                    rc.writeSharedArray(i, location);
+                    break;
+                }
+            }
         }
     }
 }
