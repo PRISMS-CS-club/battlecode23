@@ -205,7 +205,7 @@ public strictfp class RobotPlayer {
     /**
      * move the robot to destination, returns the step taken
      * */
-    static int moveTowardInVisRange(RobotController rc, MapLocation destination) throws GameActionException {
+    static int moveTowardInVisRange(RobotController rc, MapLocation destination, boolean doMove) throws GameActionException {
         assert isInVisRange(rc.getLocation(), destination) : "only support moving in vis range for this function";
         MapLocation start = rc.getLocation();
         int[][] dist = new int[rc.getMapWidth()][rc.getMapHeight()];
@@ -249,7 +249,7 @@ public strictfp class RobotPlayer {
             }
         }
         if (!reached) return -1;
-
+        if (doMove) return dist[destination.x][destination.y];
         ArrayList<Direction> movPath = new ArrayList<>();
         MapLocation cur = destination;
         while(!cur.equals(start)){
