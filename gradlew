@@ -116,6 +116,8 @@ esac
 
 CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
 
+# Use Java 1.8 on macOS
+[[ $OSTYPE == 'darwin'* ]] && JAVA_HOME=$(/usr/libexec/java_home -v 1.8)
 
 # Determine the Java command to use to start the JVM.
 if [ -n "$JAVA_HOME" ] ; then
