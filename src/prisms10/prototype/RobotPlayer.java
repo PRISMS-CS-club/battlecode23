@@ -249,6 +249,9 @@ public strictfp class RobotPlayer {
                 if(rc.canCollectResource(bindTo, -1)) {
                     // if can collect resource, collect
                     rc.collectResource(bindTo, -1);
+                    if(rc.getWeight() >= 40) {
+                        bindTo = null;
+                    }
                 } else {
                     // otherwise, move toward the destination
                     moveToward(rc, bindTo);
@@ -277,13 +280,15 @@ public strictfp class RobotPlayer {
                 }
                 boolean transferred = false;          // whether the bot successfully transferred any resource to headquarter
                 for(ResourceType resourceType : ResourceType.values()) {
-                    if(rc.canTransferResource(bindTo, resourceType, -1)) {
-                        rc.transferResource(bindTo, resourceType, -1);
+                    if(rc.canTransferResource(bindTo, resourceType, rc.getResourceAmount(resourceType))) {
+                        rc.transferResource(bindTo, resourceType, rc.getResourceAmount(resourceType));
                         transferred = true;
                     }
                 }
                 if(!transferred) {
                     moveToward(rc, bindTo);
+                } else if(rc.getWeight() <= 0) {
+                    bindTo = null;
                 }
                 break;
             case 3:
