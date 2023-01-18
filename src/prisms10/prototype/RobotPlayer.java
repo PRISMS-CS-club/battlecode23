@@ -1,10 +1,6 @@
 package prisms10.prototype;
 
 import battlecode.common.*;
-import battlecode.common.GameConstants.*;
-import battlecode.common.RobotController.*;
-
-import java.awt.*;
 import java.util.*;
 import java.util.List;
 
@@ -107,16 +103,16 @@ public strictfp class RobotPlayer {
     };
 
     // helper functions
-    static MapLocation intToLoc(short number) {
+    static MapLocation intToLoc(int number) {
         return new MapLocation((number & 0x3F80) >> 7, number & 0x007F);
     }
 
-    static short locToInt(MapLocation location, ResourceType type) {
-        return (short) ((type.resourceID << 14) + (location.x << 7) + location.y);
+    static int locToInt(MapLocation location, ResourceType type) {
+        return (int) ((type.resourceID << 14) + (location.x << 7) + location.y);
     }
 
-    static short locToInt(MapLocation location) {
-        return (short) ((location.x << 7) + location.y);
+    static int locToInt(MapLocation location) {
+        return (int) ((location.x << 7) + location.y);
     }
 
     static Direction toDirection(int dx, int dy) {
@@ -139,7 +135,7 @@ public strictfp class RobotPlayer {
     static void scanForWells(RobotController rc) throws GameActionException {
         WellInfo[] wells = rc.senseNearbyWells();
         for (WellInfo well : wells) {
-            short s = locToInt(well.getMapLocation(), well.getResourceType());
+            int s = locToInt(well.getMapLocation(), well.getResourceType());
             boolean toWrite = true;
             for (int i = 0; i < 16; i++) {
                 if (s == rc.readSharedArray(i)) {
@@ -198,8 +194,8 @@ public strictfp class RobotPlayer {
     }
 
     static boolean isInVisRange(MapLocation loc1, MapLocation loc2){
-        int dx = Math.abs(loc1.x - loc2.x);
-        int dy = Math.abs(loc1.y - loc2.y);
+        int dx = loc1.x - loc2.x;
+        int dy = loc1.y - loc2.y;
         return (dx * dx) + (dy * dy) <= getVisDis();
     }
 
@@ -294,17 +290,17 @@ public strictfp class RobotPlayer {
 
     }
 
-    static final short LOCATION_DEFAULT = 0x3FFF;
+    static final int LOCATION_DEFAULT = 0x3FFF;
 
     // the first few robots the headquarters will build
     static final RobotType[] initialRobots = new RobotType[]{
-            RobotType.CARRIER, RobotType.LAUNCHER
+            RobotType.AMPLIFIER, RobotType.CARRIER, RobotType.LAUNCHER
     };
 
     /*** local variables kept by each robot ***/
-    static Set<Short> locationsToWrite = new HashSet<>(); // Every important location that is scheduled to record into shared memory
-    static MapLocation bindTo = null;                     // An important location (such as a well) that the robot is bound to
-    static int state;                                     // Current state of robot. Its meaning depends on the type of robot
+    static Set<Integer> locationsToWrite = new HashSet<>(); // Every important location that is scheduled to record into shared memory
+    static MapLocation bindTo = null;                       // An important location (such as a well) that the robot is bound to
+    static int state;                                       // Current state of robot. Its meaning depends on the type of robot
     static MapInfo[][] mapInfos = new MapInfo[GameConstants.MAP_MAX_WIDTH][GameConstants.MAP_MAX_HEIGHT];    // What the robot knows about the map
     static int[][] passable = new int[GameConstants.MAP_MAX_WIDTH][GameConstants.MAP_MAX_HEIGHT];    // What the robot knows about the map (passable)
     // 0 -> cannot pass, 1 can pass, -1 unknown
@@ -325,7 +321,7 @@ public strictfp class RobotPlayer {
             scanForWells(rc);
         }
         // record the current headquarter's position into shared memory
-        short currentLocation = locToInt(rc.getLocation());
+        int currentLocation = locToInt(rc.getLocation());
         for (int i = 16; i < 20; i++) {
             int data = rc.readSharedArray(i);
             if (data == currentLocation) {
@@ -418,7 +414,7 @@ public strictfp class RobotPlayer {
                     int minDist = Integer.MAX_VALUE;
                     MapLocation targetLocation = null;
                     for (int i = 16; i < 20; i++) {
-                        short read = (short) rc.readSharedArray(i);
+                        int read = (int) rc.readSharedArray(i);
                         if (read != LOCATION_DEFAULT) {
                             MapLocation headquarter = intToLoc(read);
                             int distance = taxicabDistance(headquarter, rc.getLocation());
@@ -448,7 +444,7 @@ public strictfp class RobotPlayer {
                     List<MapLocation> locations = new ArrayList<>();
                     for(int i = 0; i < 8; i++) {
                         // find a valid well and set it for target
-                        short pos = (short) rc.readSharedArray(i);
+                        int pos = (int) rc.readSharedArray(i);
                         if(pos != LOCATION_DEFAULT) {
                             locations.add(intToLoc(pos));
                         }
@@ -466,15 +462,13 @@ public strictfp class RobotPlayer {
                 break;
         }
         // clear up repeated information in locationsToWrite array
-        for(Short location : locationsToWrite) {
+        for(int location : locationsToWrite) {
             for(int i = 0; i < 8; i++) {
                 int before = rc.readSharedArray(i);
                 if(before == location) {
-                    locationsToWrite.remove(location);
                     break;
                 }
                 if(before == LOCATION_DEFAULT && rc.canWriteSharedArray(i, location)) {
-                    locationsToWrite.remove(location);
                     rc.writeSharedArray(i, location);
                     break;
                 }
@@ -509,15 +503,13 @@ public strictfp class RobotPlayer {
             rc.move(dir);
         }
         // clear up repeated information in locationsToWrite array
-        for(Short location : locationsToWrite) {
+        for(int location : locationsToWrite) {
             for(int i = 0; i < 8; i++) {
                 int before = rc.readSharedArray(i);
                 if(before == location) {
-                    locationsToWrite.remove(location);
                     break;
                 }
                 if(before == LOCATION_DEFAULT && rc.canWriteSharedArray(i, location)) {
-                    locationsToWrite.remove(location);
                     rc.writeSharedArray(i, location);
                     break;
                 }
