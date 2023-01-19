@@ -264,6 +264,28 @@ public strictfp class RobotPlayer {
     }
 
 
+    static MapLocation[] getCircleRimLocs(MapLocation cent, int radSqr){
+        int rad = (int)Math.sqrt(radSqr);
+        MapLocation[] vecs = new MapLocation[radSqr]; // each x value of radius corresbond to a y value
+        for (int i = 0; i < rad; i++){
+            // x^2 + y^2 = r^2
+            // so that y = sqrt(r^2 - x^2)
+            vecs[i] = new MapLocation(i, (int)Math.sqrt(radSqr - i * i));
+        }
+        MapLocation[] ret = new MapLocation[vecs.length * 4];
+
+        // center +x, +y | +x, -y | -x, +y | -x, -y from vec
+        for (int i = 0; i < vecs.length; i++){
+            ret[i] = new MapLocation(cent.x + vecs[i].x, cent.y + vecs[i].y);
+            ret[i + vecs.length] = new MapLocation(cent.x + vecs[i].x, cent.y - vecs[i].y);
+            ret[i + vecs.length * 2] = new MapLocation(cent.x - vecs[i].x, cent.y + vecs[i].y);
+            ret[i + vecs.length * 3] = new MapLocation(cent.x - vecs[i].x, cent.y - vecs[i].y);
+        }
+        return ret;
+    }
+
+
+
     /**
      * Move this robot toward a given position one step.
      *
@@ -287,7 +309,9 @@ public strictfp class RobotPlayer {
         } else if(rc.canMove(dirR.rotateRight())) {
             rc.move(dirR.rotateRight());
         }
+        while(rc.getLocation() != destination){
 
+        }
     }
 
     static final int LOCATION_DEFAULT = 0x3FFF;
@@ -305,6 +329,7 @@ public strictfp class RobotPlayer {
     static int[][] passable = new int[GameConstants.MAP_MAX_WIDTH][GameConstants.MAP_MAX_HEIGHT];    // What the robot knows about the map (passable)
     // 0 -> cannot pass, 1 can pass, -1 unknown
     static RobotType rType;
+    boolean turningLeft = Math.random() < 0.5;              // when facing a wall, should the robot turn left or right?
     /**
      * Run a single turn for a Headquarters.
      * This code is wrapped inside the infinite loop in run(), so it is called once per turn.
