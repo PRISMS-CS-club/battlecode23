@@ -9,10 +9,14 @@ M M X X X X X X X Y Y Y Y Y Y Y
 ```
 
 - `M`: 2 bit mark, indicating the current location's type
-  - `00`: Sky island
-  - `01`: Ad well
-  - `10`: Mn well
-  - `11`: Ex well
+  - Wells
+    - `01`: Ad well
+    - `10`: Mn well
+    - `11`: Ex well
+  - Sky Islands
+    - `00`: empty island
+    - `01`: island occupied by our team
+    - `10`: island occupied by enemy team
 - `X`: 7 bit x coordinate
 - `Y`: 7 bit y coordinate
 
@@ -29,6 +33,14 @@ Special:
   - `I`: Whether memory is initialized, either 0 or 1.
 
 ## Robot states
+
+### Headquarter
+
+| number                                                                | meaning                      |
+|-----------------------------------------------------------------------|------------------------------|
+| 0 - `initialRobots.length - 1`                                        | producing the initial robots |
+| `initialRobots.length` - `initialRobots.length + nextAnchorRound - 1` | producing random objects     |
+| `initialRobots.length + nextAnchorRound`                              | producing one anchor         |
 
 ### Carrier
 
