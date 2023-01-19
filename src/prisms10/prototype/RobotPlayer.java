@@ -101,6 +101,9 @@ public strictfp class RobotPlayer {
             {Direction.WEST, Direction.CENTER, Direction.EAST},
             {Direction.NORTHWEST, Direction.NORTH, Direction.NORTHEAST}
     };
+    static final int SHARED_MEMORY_WELLS = 0;         // starting position of well section in shared memory
+    static final int SHARED_MEMORY_HEADQUARTERS = 8;
+    static final int SHARED_MEMORY_SKY_ISLAND = 12;
 
     // helper functions
     static MapLocation intToLoc(int number) {
@@ -108,11 +111,11 @@ public strictfp class RobotPlayer {
     }
 
     static int locToInt(MapLocation location, ResourceType type) {
-        return (int) ((type.resourceID << 14) + (location.x << 7) + location.y);
+        return ((type.resourceID << 14) + (location.x << 7) + location.y);
     }
 
     static int locToInt(MapLocation location) {
-        return (int) ((location.x << 7) + location.y);
+        return ((location.x << 7) + location.y);
     }
 
     static Direction toDirection(int dx, int dy) {
@@ -137,7 +140,7 @@ public strictfp class RobotPlayer {
         for (WellInfo well : wells) {
             int s = locToInt(well.getMapLocation(), well.getResourceType());
             boolean toWrite = true;
-            for (int i = 0; i < 16; i++) {
+            for (int i = SHARED_MEMORY_WELLS; i < SHARED_MEMORY_HEADQUARTERS; i++) {
                 if (s == rc.readSharedArray(i)) {
                     toWrite = false;
                     break;
@@ -145,6 +148,24 @@ public strictfp class RobotPlayer {
             }
             if (toWrite) {
                 locationsToWrite.add(s);
+            }
+        }
+    }
+    static void scanForSkyIsland(RobotController rc) throws GameActionException {
+        for(int islandID : rc.senseNearbyIslands()) {
+            if(rc.readSharedArray(islandID) != LOCATION_DEFAULT) {
+                // repeated island
+                continue;
+            }
+            MapLocation location = new MapLocation(Integer.MAX_VALUE, Integer.MAX_VALUE);
+            for(MapLocation islandLocation : rc.senseNearbyIslandLocations(islandID)) {
+                if(islandLocation.x <= location.x && islandLocation.y <= location.y) {
+                    location = islandLocation;
+                }
+            }
+            int locationInt = locToInt(location);
+            if(rc.canWriteSharedArray(islandID + SHARED_MEMORY_SKY_ISLAND, locationInt)) {
+                rc.writeSharedArray(islandID + SHARED_MEMORY_SKY_ISLAND, locationInt);
             }
         }
     }
@@ -339,7 +360,7 @@ public strictfp class RobotPlayer {
         if ((rc.readSharedArray(63) & 0x8000) == 0) {
             rc.writeSharedArray(63, 0x8000);
             // initialize shared memory
-            for (int i = 0; i < 20; i++) {
+            for (int i = 0; i < 48; i++) {
                 rc.writeSharedArray(i, LOCATION_DEFAULT);
             }
             // initialize nearby well info
@@ -347,7 +368,7 @@ public strictfp class RobotPlayer {
         }
         // record the current headquarter's position into shared memory
         int currentLocation = locToInt(rc.getLocation());
-        for (int i = 16; i < 20; i++) {
+        for (int i = 8; i < 11; i++) {
             int data = rc.readSharedArray(i);
             if (data == currentLocation) {
                 // repeated information found in shared memory
@@ -400,23 +421,59 @@ public strictfp class RobotPlayer {
      * This code is wrapped inside the infinite loop in run(), so it is called once per turn.
      */
     static void runCarrier(RobotController rc) throws GameActionException {
-        // record information of observed wells
+        // record information of observed wells and sky islands
         scanForWells(rc);
+        scanForSkyIsland(rc);
         // update current state
-        if (rc.getNumAnchors(Anchor.STANDARD) + rc.getNumAnchors(Anchor.ACCELERATING) > 0) {
-            state = 1;
-        } else if (rc.getWeight() >= 40 && state != 2) {
-            bindTo = null;
-            state = 2;
-        } else if (rc.getWeight() <= 0 && bindTo != null) {
-            state = 0;
-        } else if (rc.getWeight() <= 0) {
-            state = 3;
-        }
         rc.setIndicatorString("current state: " + state);
         // perform an operation according to its state
         switch (state) {
             case 0:
+                // if the robot is holding an anchor, go to state 2
+                if(rc.getAnchor() != null) {
+                    state = 2;
+                    break;
+                }
+                // try to get an anchor
+                if(bindTo != null) {
+                    if(rc.canTakeAnchor(bindTo, Anchor.ACCELERATING)) {
+                        rc.takeAnchor(bindTo, Anchor.ACCELERATING);
+                        bindTo = null;
+                        state = 2;
+                        break;
+                    }
+                    if(rc.canTakeAnchor(bindTo, Anchor.STANDARD)) {
+                        rc.takeAnchor(bindTo, Anchor.STANDARD);
+                        bindTo = null;
+                        state = 2;
+                        break;
+                    }
+                }
+                // if the bot can still carry stuff, try to find a well
+                if(rc.getWeight() < 40) {
+                    List<MapLocation> locations = new ArrayList<>();
+                    for(int i = SHARED_MEMORY_WELLS; i < SHARED_MEMORY_HEADQUARTERS; i++) {
+                        // find a valid well and set it for target
+                        int pos = rc.readSharedArray(i);
+                        if(pos != LOCATION_DEFAULT) {
+                            locations.add(intToLoc(pos));
+                        }
+                    }
+                    if(locations.size() != 0) {
+                        // if the robot can find a well, target toward the well
+                        bindTo = locations.get(Math.abs(rng.nextInt()) % locations.size());
+                        state = 1;
+                        break;
+                    }
+                }
+                // if the bot does not find any job, wander randomly
+                Direction dir = Direction.values()[(rng.nextInt() % 8 + 8) % 8];
+                if (rc.canMove(dir)) {
+                    rc.move(dir);
+                }
+                break;
+
+            case 1:
                 rc.setIndicatorString("Targeting to " + bindTo.x + ", " + bindTo.y);
                 MapLocation current = rc.getLocation();
                 if (rc.canCollectResource(bindTo, -1)) {
@@ -424,33 +481,60 @@ public strictfp class RobotPlayer {
                     rc.collectResource(bindTo, -1);
                     if (rc.getWeight() >= 40) {
                         bindTo = null;
+                        state = 3;
                     }
                 } else {
                     // otherwise, move toward the destination
                     moveToward(rc, bindTo);
                 }
                 break;
-            case 1:
-                // TODO
-                break;
+
             case 2:
-                if (bindTo == null) {
-                    // find the headquarter with the smallest distance
+                if(bindTo == null) {
                     int minDist = Integer.MAX_VALUE;
-                    MapLocation targetLocation = null;
-                    for (int i = 16; i < 20; i++) {
-                        int read = (int) rc.readSharedArray(i);
-                        if (read != LOCATION_DEFAULT) {
-                            MapLocation headquarter = intToLoc(read);
-                            int distance = taxicabDistance(headquarter, rc.getLocation());
-                            if (distance < minDist) {
+                    for(int i = 0; i < 36; i++) {
+                        int read = rc.readSharedArray(i + SHARED_MEMORY_SKY_ISLAND);
+                        if(read != LOCATION_DEFAULT) {
+                            MapLocation skyIsland = intToLoc(read);
+                            int distance = diagnoDist(skyIsland, rc.getLocation());
+                            if(distance < minDist) {
                                 minDist = distance;
-                                targetLocation = headquarter;
+                                bindTo = skyIsland;
                             }
                         }
                     }
-                    bindTo = targetLocation;
                 }
+                // if can place anchor, place it
+                if(rc.canPlaceAnchor()) {
+                    rc.placeAnchor();
+                    bindTo = null;
+                    state = 3;
+                }
+                // otherwise, walk toward the sky island
+                if(bindTo != null) {
+                    moveToward(rc, bindTo);
+                } else {
+                    state = 0;
+                }
+                break;
+
+            case 3:
+                if (bindTo == null) {
+                    // find the headquarter with the smallest distance
+                    int minDist = Integer.MAX_VALUE;
+                    for (int i = SHARED_MEMORY_HEADQUARTERS; i < SHARED_MEMORY_SKY_ISLAND; i++) {
+                        int read = rc.readSharedArray(i);
+                        if (read != LOCATION_DEFAULT) {
+                            MapLocation headquarter = intToLoc(read);
+                            int distance = diagnoDist(headquarter, rc.getLocation());
+                            if (distance < minDist) {
+                                minDist = distance;
+                                bindTo = headquarter;
+                            }
+                        }
+                    }
+                }
+                // try to transfer every resource back to headquarter
                 boolean transferred = false;          // whether the bot successfully transferred any resource to headquarter
                 for (ResourceType resourceType : ResourceType.values()) {
                     if (rc.canTransferResource(bindTo, resourceType, rc.getResourceAmount(resourceType))) {
@@ -461,34 +545,13 @@ public strictfp class RobotPlayer {
                 if (!transferred) {
                     moveToward(rc, bindTo);
                 } else if (rc.getWeight() <= 0) {
-                    bindTo = null;
-                }
-                break;
-            case 3:
-                if(bindTo == null) {
-                    List<MapLocation> locations = new ArrayList<>();
-                    for(int i = 0; i < 8; i++) {
-                        // find a valid well and set it for target
-                        int pos = (int) rc.readSharedArray(i);
-                        if(pos != LOCATION_DEFAULT) {
-                            locations.add(intToLoc(pos));
-                        }
-                    }
-                    if(locations.size() != 0) {
-                        bindTo = locations.get(Math.abs(rng.nextInt()) % locations.size());
-                        state = 0;
-                        break;
-                    }
-                }
-                Direction dir = Direction.values()[(rng.nextInt() % 8 + 8) % 8];
-                if (rc.canMove(dir)) {
-                    rc.move(dir);
+                    state = 0;
                 }
                 break;
         }
         // clear up repeated information in locationsToWrite array
         for(int location : locationsToWrite) {
-            for(int i = 0; i < 8; i++) {
+            for(int i = SHARED_MEMORY_WELLS; i < SHARED_MEMORY_HEADQUARTERS; i++) {
                 int before = rc.readSharedArray(i);
                 if(before == location) {
                     break;
@@ -508,6 +571,7 @@ public strictfp class RobotPlayer {
     static void runLauncher(RobotController rc) throws GameActionException {
         // scan for wells in its observable range
         scanForWells(rc);
+        scanForSkyIsland(rc);
         // Try to attack someone
         int radius = rc.getType().actionRadiusSquared;
         Team opponent = rc.getTeam().opponent();
@@ -529,7 +593,7 @@ public strictfp class RobotPlayer {
         }
         // clear up repeated information in locationsToWrite array
         for(int location : locationsToWrite) {
-            for(int i = 0; i < 8; i++) {
+            for(int i = SHARED_MEMORY_WELLS; i < SHARED_MEMORY_HEADQUARTERS; i++) {
                 int before = rc.readSharedArray(i);
                 if(before == location) {
                     break;
