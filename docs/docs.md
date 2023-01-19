@@ -52,3 +52,19 @@ Special:
 | 3      | going back to headquarter            |
 
 ### Launcher
+
+| number | meaning                                        |
+|--------|------------------------------------------------|
+| 0      | no target, exploring the map                   |
+| 1      | moving toward the destination                  |
+| 2      | staying in one fixed location without movement |
+| 3      | moving around the target with it kept in sight |
+
+Assignment of launchers
+
+| position           | amount |
+|--------------------|--------|
+| around own base    | 20%    |
+| at enemy's base    | 35%    |
+| around sky islands | 35%    |
+| random moving      | 10%    |

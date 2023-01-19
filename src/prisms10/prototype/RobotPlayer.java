@@ -159,7 +159,6 @@ public strictfp class RobotPlayer {
         }
     }
     static void scanForSkyIsland(RobotController rc) throws GameActionException {
-        // TODO (mark who islands are occupied by)
         Team myTeam = rc.getTeam();
         for(int islandID : rc.senseNearbyIslands()) {
             int islandSharedInfo = rc.readSharedArray(islandID + SHARED_MEMORY_SKY_ISLAND);
@@ -584,24 +583,33 @@ public strictfp class RobotPlayer {
         // scan for wells in its observable range
         scanForWells(rc);
         scanForSkyIsland(rc);
-        // Try to attack someone
-        int radius = rc.getType().actionRadiusSquared;
-        Team opponent = rc.getTeam().opponent();
-        RobotInfo[] enemies = rc.senseNearbyRobots(radius, opponent);
-        if (enemies.length >= 0) {
-            // MapLocation toAttack = enemies[0].location;
-            MapLocation toAttack = rc.getLocation().add(Direction.EAST);
-
-            if (rc.canAttack(toAttack)) {
-                rc.setIndicatorString("Attacking");
-                rc.attack(toAttack);
+        // try to attack someone
+        RobotInfo[] enemyLocation = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
+        if(enemyLocation.length > 0) {
+            for(RobotInfo enemy : enemyLocation) {
+                if(rc.canAttack(enemy.location)) {
+                    rc.attack(enemy.location);
+                    break;
+                }
             }
         }
-
-        // Also try to move randomly.
-        Direction dir = Direction.values()[rng.nextInt(Direction.values().length)];
-        if (rc.canMove(dir)) {
-            rc.move(dir);
+        // perform action according to its state
+        switch(state) {
+            case 0:
+                Direction dir = Direction.values()[rng.nextInt(Direction.values().length)];
+                if (rc.canMove(dir)) {
+                    rc.move(dir);
+                }
+                break;
+            case 1:
+                // TODO
+                break;
+            case 2:
+                // move against wind current
+                rc.move(rc.senseMapInfo(rc.getLocation()).getCurrentDirection().opposite());
+                break;
+            case 3:
+                break;
         }
         // clear up repeated information in locationsToWrite array
         for(int location : locationsToWrite) {
