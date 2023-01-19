@@ -210,8 +210,8 @@ public strictfp class RobotPlayer {
         }
     }
 
-    static boolean isInVisRange(MapLocation loc){
-        return (loc.x * loc.x) + (loc.y * loc.y) <= getVisDis();
+    static boolean isInVisRange(MapLocation len){
+        return (len.x * len.x) + (len.y * len.y) <= getVisDis();
     }
 
     static boolean isInVisRange(MapLocation loc1, MapLocation loc2){
@@ -225,6 +225,8 @@ public strictfp class RobotPlayer {
      * */
     static int moveTowardInVisRange(RobotController rc, MapLocation destination, boolean doMove) throws GameActionException {
         assert isInVisRange(rc.getLocation(), destination) : "only support moving in vis range for this function";
+        assert destination != null : "destination cannot be null";
+
         MapLocation start = rc.getLocation();
         int[][] dist = new int[rc.getMapWidth()][rc.getMapHeight()];
         HashMap<MapLocation, MapLocation> prePos = new HashMap<>();
@@ -241,27 +243,31 @@ public strictfp class RobotPlayer {
 
         dist[start.x][start.y] = 0;
         nextPq.add(start);
-
-        while(nextPq.size() >= 0){
+        System.out.println("start: " + start + " dest: " + destination);
+        while(nextPq.size() > 0){
             MapLocation cur = nextPq.poll();
+            assert cur != null : "nextPq should not be empty";
             if (cur.equals(destination)){
                 reached = true;
+                System.out.println("found");
                 break;
             }
             // test if able to put it in the queue
             for (Direction dir : Direction.allDirections()){
+                if (dir == Direction.CENTER) continue;
                 MapLocation nexPos = new MapLocation(dir.dx + cur.x, dir.dy + cur.y);
+//                rc.setIndicatorString("checking nextpos " + nexPos);
+
                 // test if in the range from 0 to rc.getMapWidth() - 1 and 0 to rc.getMapHeight() - 1
-                if (nexPos.x < 0 || nexPos.x > rc.getMapWidth() || nexPos.y < 0 || nexPos.y > rc.getMapHeight()){
+                if (!isInVisRange(rc.getLocation(), nexPos) || !rc.onTheMap(nexPos) ){
+//                    System.out.println("out of range: " + nexPos);
                     continue;
                 }
-                if (passable[nexPos.x][nexPos.y] == -1) {
-                    passable[nexPos.x][nexPos.y] = rc.sensePassability(nexPos) ? 1 : 0;
-                }
-                if (passable[nexPos.x][nexPos.y] == 0){
+                if (!rc.sensePassability(nexPos)){
                     continue;
                 }
                 dist[nexPos.x][nexPos.y] = dist[cur.x][cur.y] + 1;
+//                rc.setIndicatorString("pushing " + nexPos + " into pq");
                 nextPq.add(nexPos);
                 prePos.put(nexPos, cur);
             }
@@ -287,8 +293,8 @@ public strictfp class RobotPlayer {
 
     static MapLocation[] getCircleRimLocs(MapLocation cent, int radSqr){
         int rad = (int)Math.sqrt(radSqr);
-        MapLocation[] vecs = new MapLocation[radSqr]; // each x value of radius corresbond to a y value
-        for (int i = 0; i < rad; i++){
+        MapLocation[] vecs = new MapLocation[rad + 1]; // each x value of radius corresbond to a y value
+        for (int i = 0; i <= rad; i++){
             // x^2 + y^2 = r^2
             // so that y = sqrt(r^2 - x^2)
             vecs[i] = new MapLocation(i, (int)Math.sqrt(radSqr - i * i));
@@ -302,9 +308,27 @@ public strictfp class RobotPlayer {
             ret[i + vecs.length * 2] = new MapLocation(cent.x - vecs[i].x, cent.y + vecs[i].y);
             ret[i + vecs.length * 3] = new MapLocation(cent.x - vecs[i].x, cent.y - vecs[i].y);
         }
+
+        for (int i = 0; i < vecs.length; i++){
+//            System.out.println("vec: " + vecs[i]);
+        }
+
         return ret;
     }
 
+    static MapLocation getClosestLocOnCircToTar(MapLocation cent, int radSqr, MapLocation tar){
+        MapLocation[] rimLocs = getCircleRimLocs(cent, radSqr);
+        int minDist = Integer.MAX_VALUE;
+        MapLocation ret = null;
+        for (MapLocation loc : rimLocs){
+            int dist = diagnoDist(loc, tar);
+            if (dist < minDist){
+                minDist = dist;
+                ret = loc;
+            }
+        }
+        return ret;
+    }
 
 
     /**
@@ -314,24 +338,38 @@ public strictfp class RobotPlayer {
      * @param destination destination
      */
     static void moveToward(RobotController rc, MapLocation destination) throws GameActionException {
+        rc.setIndicatorString("moving toward " + destination);
         // TODO (avoid obstacles)
-        MapLocation current = rc.getLocation();
-        Direction direction = toDirection(destination.x - current.x, destination.y - current.y);
-        Direction dirL = direction.rotateLeft(), dirR = direction.rotateRight();
-        if(rc.canMove(direction)) {
-            rc.move(direction);
-        } else if(rc.canMove(dirL)) {
-            // if the bot cannot move directly toward the destination, try sideways
-            rc.move(dirL);
-        } else if(rc.canMove(dirR)) {
-            rc.move(dirR);
-        } else if(rc.canMove(dirL.rotateLeft())) {
-            rc.move(dirL.rotateLeft());
-        } else if(rc.canMove(dirR.rotateRight())) {
-            rc.move(dirR.rotateRight());
-        }
+//        MapLocation current = rc.getLocation();
+//        Direction direction = toDirection(destination.x - current.x, destination.y - current.y);
+//        Direction dirL = direction.rotateLeft(), dirR = direction.rotateRight();
+//        if(rc.canMove(direction)) {
+//            rc.move(direction);
+//        } else if(rc.canMove(dirL)) {
+//            // if the bot cannot move directly toward the destination, try sideways
+//            rc.move(dirL);
+//        } else if(rc.canMove(dirR)) {
+//            rc.move(dirR);
+//        } else if(rc.canMove(dirL.rotateLeft())) {
+//            rc.move(dirL.rotateLeft());
+//        } else if(rc.canMove(dirR.rotateRight())) {
+//            rc.move(dirR.rotateRight());
+//        }
+        Direction curDir = null; // if faced walls, move to this direction, null means not faced walls
         while(rc.getLocation() != destination){
+            MapLocation closestOnRim = getClosestLocOnCircToTar(rc.getLocation(), getVisDis(), destination);
+            int dist = moveTowardInVisRange(rc, closestOnRim, true);
 
+            if (dist == -1){
+                curDir = rc.getLocation().directionTo(closestOnRim);
+                while(!rc.canMove(curDir)){
+                    curDir = turningLeft ? curDir.rotateLeft() : curDir.rotateRight();
+                }
+                rc.setIndicatorString("cannot move to closest on rim, now moving to " + curDir);
+                rc.move(curDir);
+            } else {
+                rc.setIndicatorString("moving to " + closestOnRim + " dist: " + dist);
+            }
         }
     }
 
@@ -350,7 +388,7 @@ public strictfp class RobotPlayer {
     static int[][] passable = new int[GameConstants.MAP_MAX_WIDTH][GameConstants.MAP_MAX_HEIGHT];    // What the robot knows about the map (passable)
     // 0 -> cannot pass, 1 can pass, -1 unknown
     static RobotType rType;
-    boolean turningLeft = Math.random() < 0.5;              // when facing a wall, should the robot turn left or right?
+    static boolean turningLeft = Math.random() < 0.5;              // when facing a wall, should the robot turn left or right?
     /**
      * Run a single turn for a Headquarters.
      * This code is wrapped inside the infinite loop in run(), so it is called once per turn.
@@ -477,6 +515,7 @@ public strictfp class RobotPlayer {
                 rc.setIndicatorString("Targeting to " + bindTo.x + ", " + bindTo.y);
                 MapLocation current = rc.getLocation();
                 if (rc.canCollectResource(bindTo, -1)) {
+                    rc.setIndicatorString("Collecting resource");
                     // if can collect resource, collect
                     rc.collectResource(bindTo, -1);
                     if (rc.getWeight() >= 40) {
