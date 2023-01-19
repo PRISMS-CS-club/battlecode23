@@ -62,9 +62,12 @@ public strictfp class RobotPlayer {
                     case LAUNCHER:
                         runLauncher(rc);
                         break;
-                    case BOOSTER: // Examplefuncsplayer doesn't use any of these robot types below.
-                    case DESTABILIZER: // You might want to give them a try!
+                    case BOOSTER:
+                        break;
+                    case DESTABILIZER:
+                        break;
                     case AMPLIFIER:
+                        runAmplifier(rc);
                         break;
                 }
 
@@ -118,6 +121,10 @@ public strictfp class RobotPlayer {
         return ((location.x << 7) + location.y);
     }
 
+    static int teamToInt(Team team, Team myTeam) {
+        return (team == Team.NEUTRAL)? 0: ((team == myTeam)? 1: 2);
+    }
+
     static Direction toDirection(int dx, int dy) {
         return DIRECTION_MAP[sign(dy) + 1][sign(dx) + 1];
     }
@@ -152,10 +159,18 @@ public strictfp class RobotPlayer {
         }
     }
     static void scanForSkyIsland(RobotController rc) throws GameActionException {
+        // TODO (mark who islands are occupied by)
+        Team myTeam = rc.getTeam();
         for(int islandID : rc.senseNearbyIslands()) {
-            if(rc.readSharedArray(islandID) != LOCATION_DEFAULT) {
-                // repeated island
-                continue;
+            int islandSharedInfo = rc.readSharedArray(islandID + SHARED_MEMORY_SKY_ISLAND);
+            Team occupiedTeam = rc.senseTeamOccupyingIsland(islandID);
+            int stat = teamToInt(occupiedTeam, myTeam);
+            if(islandSharedInfo != LOCATION_DEFAULT) {
+                int islandInfoNew = (islandSharedInfo & 0x3FFF) | (stat << 14);
+                if(islandInfoNew != islandSharedInfo && rc.canWriteSharedArray(islandID + SHARED_MEMORY_SKY_ISLAND, islandInfoNew)) {
+                    rc.writeSharedArray(islandID + SHARED_MEMORY_SKY_ISLAND, islandInfoNew);
+                }
+                return;
             }
             MapLocation location = new MapLocation(Integer.MAX_VALUE, Integer.MAX_VALUE);
             for(MapLocation islandLocation : rc.senseNearbyIslandLocations(islandID)) {
@@ -163,7 +178,7 @@ public strictfp class RobotPlayer {
                     location = islandLocation;
                 }
             }
-            int locationInt = locToInt(location);
+            int locationInt = locToInt(location) | (stat << 14);
             if(rc.canWriteSharedArray(islandID + SHARED_MEMORY_SKY_ISLAND, locationInt)) {
                 rc.writeSharedArray(islandID + SHARED_MEMORY_SKY_ISLAND, locationInt);
             }
@@ -375,10 +390,13 @@ public strictfp class RobotPlayer {
 
     static final int LOCATION_DEFAULT = 0x3FFF;
 
+    /*** constants for headquarters ***/
     // the first few robots the headquarters will build
     static final RobotType[] initialRobots = new RobotType[]{
             RobotType.AMPLIFIER, RobotType.CARRIER, RobotType.LAUNCHER
     };
+    // number of rounds producing items randomly before producing an anchor is required
+    static final int nextAnchorRound = 30;
 
     /*** local variables kept by each robot ***/
     static Set<Integer> locationsToWrite = new HashSet<>(); // Every important location that is scheduled to record into shared memory
@@ -430,26 +448,38 @@ public strictfp class RobotPlayer {
             if(robotBuilt) {
                 state++;
             }
-        }
-        // Pick a direction to build in.
-        Direction dir = Direction.values()[rng.nextInt(Direction.values().length)];
-        MapLocation newLoc = rc.getLocation().add(dir);
-        if (rc.canBuildAnchor(Anchor.STANDARD)) {
-            // If we can build an anchor do it!
-            rc.buildAnchor(Anchor.STANDARD);
-            rc.setIndicatorString("Building anchor! " + rc.getAnchor());
-        }
-        if (rng.nextBoolean()) {
-            // Let's try to build a carrier.
-            rc.setIndicatorString("Trying to build a carrier");
-            if (rc.canBuildRobot(RobotType.CARRIER, newLoc)) {
-                rc.buildRobot(RobotType.CARRIER, newLoc);
+        } else if(state == initialRobots.length + nextAnchorRound) {
+            // produce an anchor on specific state
+            if(rc.canBuildAnchor(Anchor.STANDARD)) {
+                rc.buildAnchor(Anchor.STANDARD);
+                state = initialRobots.length;
             }
         } else {
-            // Let's try to build a launcher.
-            rc.setIndicatorString("Trying to build a launcher");
-            if (rc.canBuildRobot(RobotType.LAUNCHER, newLoc)) {
-                rc.buildRobot(RobotType.LAUNCHER, newLoc);
+            // Pick a direction to build in.
+            Direction dir = Direction.values()[rng.nextInt(Direction.values().length)];
+            MapLocation newLoc = rc.getLocation().add(dir);
+            float randNum = rng.nextFloat();
+            if (randNum < 0.48) {
+                // probability for carrier: 48%
+                rc.setIndicatorString("Trying to build a carrier");
+                if (rc.canBuildRobot(RobotType.CARRIER, newLoc)) {
+                    rc.buildRobot(RobotType.CARRIER, newLoc);
+                    state++;
+                }
+            } else if(randNum < 0.96) {
+                // probability for launcher: 48%
+                rc.setIndicatorString("Trying to build a launcher");
+                if (rc.canBuildRobot(RobotType.LAUNCHER, newLoc)) {
+                    rc.buildRobot(RobotType.LAUNCHER, newLoc);
+                    state++;
+                }
+            } else {
+                // probability for amplifier: 48%
+                rc.setIndicatorString("Trying to build an amplifier");
+                if(rc.canBuildRobot(RobotType.AMPLIFIER, newLoc)) {
+                    rc.buildRobot(RobotType.AMPLIFIER, newLoc);
+                    state++;
+                }
             }
         }
     }
@@ -468,9 +498,14 @@ public strictfp class RobotPlayer {
         switch (state) {
             case 0:
                 // if the robot is holding an anchor, go to state 2
-                if(rc.getAnchor() != null) {
+                if(rc.getAnchor() != null && bindTo != null) {
                     state = 2;
                     break;
+                } else if(rc.getAnchor() != null) {
+                    // in wandering state, if can place the anchor, place it immediately
+                    if(rc.canPlaceAnchor()) {
+                        rc.placeAnchor();
+                    }
                 }
                 // try to get an anchor
                 if(bindTo != null) {
@@ -533,7 +568,7 @@ public strictfp class RobotPlayer {
                     int minDist = Integer.MAX_VALUE;
                     for(int i = 0; i < 36; i++) {
                         int read = rc.readSharedArray(i + SHARED_MEMORY_SKY_ISLAND);
-                        if(read != LOCATION_DEFAULT) {
+                        if(read != LOCATION_DEFAULT && ((read & 0xC000) == 0)) {
                             MapLocation skyIsland = intToLoc(read);
                             int distance = diagnoDist(skyIsland, rc.getLocation());
                             if(distance < minDist) {
@@ -642,6 +677,17 @@ public strictfp class RobotPlayer {
                     break;
                 }
             }
+        }
+    }
+
+    static void runAmplifier(RobotController rc) throws GameActionException {
+        scanForWells(rc);
+        scanForSkyIsland(rc);
+        Direction dir = Direction.values()[rng.nextInt(Direction.values().length)];
+        rc.setIndicatorString(dir.toString() + " " + rc.canMove(dir));
+        if (rc.canMove(dir)) {
+            rc.move(dir);
+            state++;
         }
     }
 }
