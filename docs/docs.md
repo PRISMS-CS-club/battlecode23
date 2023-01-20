@@ -9,18 +9,19 @@ M M X X X X X X X Y Y Y Y Y Y Y
 ```
 
 - `M`: 2 bit mark, indicating the current location's type
-  - Wells
-    - `01`: Ad well
-    - `10`: Mn well
-    - `11`: Ex well
-  - Sky Islands
-    - `00`: empty island
-    - `01`: island occupied by our team
-    - `10`: island occupied by enemy team
+    - Wells
+        - `01`: Ad well
+        - `10`: Mn well
+        - `11`: Ex well
+    - Sky Islands
+        - `00`: empty island
+        - `01`: island occupied by our team
+        - `10`: island occupied by enemy team
 - `X`: 7 bit x coordinate
 - `Y`: 7 bit y coordinate
 
 Special:
+
 - `0011 1111 1111 1111`: default location
 
 ## Shared Memory Allocation
@@ -28,9 +29,10 @@ Special:
 - integer 0-7: position of every well
 - integer 8-11: position of every headquarters
 - integer 12-47: position of every sky island
+- integer 48-51: position of every enemy headquarters
 - integer 63: memory status indicator
-  - format: `I___ ____ ____ ____`
-  - `I`: Whether memory is initialized, either 0 or 1.
+    - format: `I___ ____ ____ ____`
+    - `I`: Whether memory is initialized, either 0 or 1.
 
 ## Robot states
 
@@ -39,7 +41,7 @@ Special:
 | number                                                                | meaning                      |
 |-----------------------------------------------------------------------|------------------------------|
 | 0 - `initialRobots.length - 1`                                        | producing the initial robots |
-| `initialRobots.length` - `initialRobots.length + nextAnchorRound - 1` | producing random objects     |
+| `initialRobots.length` ~ `initialRobots.length + nextAnchorRound - 1` | producing random objects     |
 | `initialRobots.length + nextAnchorRound`                              | producing one anchor         |
 
 ### Carrier
