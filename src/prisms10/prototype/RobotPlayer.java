@@ -505,24 +505,39 @@ public strictfp class RobotPlayer {
     static void moveToward(RobotController rc, MapLocation destination, boolean toward) throws GameActionException {
 //        rc.setIndicatorString("moving toward " + destination);
         // TODO (avoid obstacles)
+        MapLocation myLocation = rc.getLocation();
+        if(myLocation.x == destination.x && myLocation.y == destination.y) {
+            // if already arrived at the location, return
+            return;
+        }
         while(rc.isMovementReady()) {
             MapLocation current = rc.getLocation();
             Direction direction = toDirection(destination.x - current.x, destination.y - current.y);
+            boolean canMove = false;   // whether the robot can make a move in this step.
+                                       // if cannot, the robot do not need to go through the same loop
             if(!toward) {
                 direction = direction.opposite();
             }
             Direction dirL = direction.rotateLeft(), dirR = direction.rotateRight();
             if (rc.canMove(direction)) {
                 rc.move(direction);
+                canMove = true;
             } else if (rc.canMove(dirL)) {
                 // if the bot cannot move directly toward the destination, try sideways
                 rc.move(dirL);
+                canMove = true;
             } else if (rc.canMove(dirR)) {
                 rc.move(dirR);
+                canMove = true;
             } else if (rc.canMove(dirL.rotateLeft())) {
                 rc.move(dirL.rotateLeft());
+                canMove = true;
             } else if (rc.canMove(dirR.rotateRight())) {
                 rc.move(dirR.rotateRight());
+                canMove = true;
+            }
+            if(!canMove) {
+                break;
             }
         }
     }
