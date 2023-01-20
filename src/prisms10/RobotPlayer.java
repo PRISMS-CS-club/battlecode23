@@ -1,4 +1,4 @@
-package prisms10.prototype;
+package prisms10;
 
 import battlecode.common.*;
 
@@ -12,11 +12,6 @@ import java.util.List;
  */
 public strictfp class RobotPlayer {
 
-    /**
-     * We will use this variable to count the number of turns this robot has been alive.
-     * You can use static variables like this to save any information you want. Keep in mind that even though
-     * these variables are static, in Battlecode they aren't actually shared between your robots.
-     */
     static int turnCount = 0;
 
     /**
@@ -36,9 +31,6 @@ public strictfp class RobotPlayer {
      **/
     @SuppressWarnings("unused")
     public static void run(RobotController rc) throws GameActionException {
-
-        // Hello world! Standard output is very useful for debugging.
-        // Everything you say here will be directly viewable in your terminal when you run a match!
 
         while (true) {
             // This code runs during the entire lifespan of the robot, which is why it is in an infinite
