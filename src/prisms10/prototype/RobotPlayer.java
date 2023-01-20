@@ -399,81 +399,6 @@ public strictfp class RobotPlayer {
         return (dx * dx) + (dy * dy) <= getVisDis();
     }
 
-    /**
-     * move the robot to destination, returns the step taken
-     */
-    static int moveTowardInVisRange(RobotController rc, MapLocation destination, boolean doMove) throws GameActionException {
-        assert isInVisRange(rc.getLocation(), destination) : "only support moving in vis range for this function";
-        assert destination != null : "destination cannot be null";
-
-        MapLocation start = rc.getLocation();
-        int[][] dist = new int[rc.getMapWidth()][rc.getMapHeight()];
-        HashMap<MapLocation, MapLocation> prePos = new HashMap<>();
-        boolean reached = false;
-
-        PriorityQueue<MapLocation> nextPq = new PriorityQueue<>(new Comparator<MapLocation>() {
-            public int compare(MapLocation o1, MapLocation o2) {
-                int o1cost = aStarHeuristic(dist[o1.x][o1.y], o1, destination);
-                int o2cost = aStarHeuristic(dist[o2.x][o2.y], o2, destination);
-                // sort the cost from smallest to largest
-                return o2cost - o1cost;
-            }
-        }); // available adjacent locations, sorted by cost from low to high
-
-        dist[start.x][start.y] = 0;
-        nextPq.add(start);
-        System.out.println("start: " + start + " dest: " + destination);
-        while (nextPq.size() > 0) {
-            MapLocation cur = nextPq.poll();
-            System.out.println("cur: " + cur);
-            assert cur != null : "nextPq should not be empty";
-            if (cur.equals(destination)) {
-                reached = true;
-                System.out.println("found");
-                break;
-            }
-            // test if able to put it in the queue
-            for (Direction dir : Direction.allDirections()) {
-                if (dir == Direction.CENTER) continue;
-                MapLocation nexPos = new MapLocation(dir.dx + cur.x, dir.dy + cur.y);
-                rc.setIndicatorString("checking nextpos " + nexPos);
-
-                // test if in the range from 0 to rc.getMapWidth() - 1 and 0 to rc.getMapHeight() - 1
-                if (!isInVisRange(rc.getLocation(), nexPos) || !rc.onTheMap(nexPos)) {
-                    continue;
-                }
-                // test if visited before
-                if (dist[nexPos.x][nexPos.y] == 0) {
-                    continue;
-                }
-
-                if (!rc.sensePassability(nexPos)) {
-                    continue;
-                }
-                dist[nexPos.x][nexPos.y] = dist[cur.x][cur.y] + 1;
-                nextPq.add(nexPos);
-                prePos.put(nexPos, cur);
-            }
-        }
-        if (!reached) return -1;
-        if (!doMove) return dist[destination.x][destination.y];
-        ArrayList<Direction> movPath = new ArrayList<>();
-        MapLocation cur = destination;
-        while (!cur.equals(start)) {
-            MapLocation pre = prePos.get(cur);
-            movPath.add(pre.directionTo(cur));
-            cur = pre;
-        }
-        Collections.reverse(movPath);
-        for (Direction dir : movPath) {
-            if (rc.canMove(dir)) {
-                rc.move(dir);
-            }
-            Clock.yield();
-        }
-        return dist[destination.x][destination.y];
-    }
-
 
     static MapLocation[] getCircleRimLocs(MapLocation cent, int radSqr) {
         int rad = (int) Math.sqrt(radSqr);
@@ -510,6 +435,9 @@ public strictfp class RobotPlayer {
         return ret;
     }
 
+    static MapLocation getRandLoc(RobotController rc){
+        return new MapLocation(rng.nextInt(rc.getMapWidth()), rng.nextInt(rc.getMapHeight()));
+    }
 
     /**
      * Move this robot toward a given position one step.
@@ -628,14 +556,6 @@ public strictfp class RobotPlayer {
         // produce first few items as scheduled in array `initialRobots`
         if (state < initialRobots.length) {
             boolean robotBuilt = false;
-//            for (Direction dir : Direction.values()) {
-//                if (rc.canBuildRobot(initialRobots[state], rc.getLocation().add(dir))) {
-//                    rc.buildRobot(initialRobots[state], rc.getLocation().add(dir));
-//                    robotBuilt = true;
-//                    break;
-//                }
-//            }
-
             // randomly select one location on the rim of the HQ to build a robot
             MapLocation[] rimLocs = getCircleRimLocs(rc.getLocation(), getActDis());
             // randomly select the first robot
@@ -649,10 +569,6 @@ public strictfp class RobotPlayer {
                     break;
                 }
             } while(true);
-
-
-
-
             if (robotBuilt) {
                 state++;
             }
@@ -898,7 +814,13 @@ public strictfp class RobotPlayer {
                         break;
                     }
                 } else {
-                    state = 4;
+                    bindTo = getRandLoc(rc);
+                    moveToward(rc, bindTo);
+                    rc.setIndicatorString("moving to randomly assigned location " + bindTo);
+                    if (diagnoDist(rc.getLocation(), bindTo) < 5) {
+                        bindTo = null;
+                        state = 4;
+                    }
                 }
             case 4:
                 // explore randomly
