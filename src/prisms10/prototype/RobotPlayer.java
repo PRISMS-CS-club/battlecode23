@@ -830,6 +830,7 @@ public strictfp class RobotPlayer {
                 Direction dir = Direction.values()[rng.nextInt(Direction.values().length)];
                 if (rc.canMove(dir)) {
                     rc.move(dir);
+
                 }
                 if ((bindTo = randSelectEnemyHQ(rc)) != null){
                     state = 1;
