@@ -373,6 +373,22 @@ public strictfp class RobotPlayer {
         }
     }
 
+    static int getActDis(){
+        switch (rType) {
+            case HEADQUARTERS:
+                return 9;
+            case CARRIER:
+                return 9;
+            case LAUNCHER:
+                return 16;
+            case DESTABILIZER:
+                return 13;
+            default:
+                return -1;
+        }
+    }
+
+
     static boolean isInVisRange(MapLocation len) {
         return (len.x * len.x) + (len.y * len.y) <= getVisDis();
     }
@@ -551,7 +567,7 @@ public strictfp class RobotPlayer {
     /*** constants for headquarters ***/
     // the first few robots the headquarters will build
     static final RobotType[] initialRobots = new RobotType[]{
-            RobotType.AMPLIFIER, RobotType.CARRIER, RobotType.LAUNCHER
+            RobotType.AMPLIFIER, RobotType.CARRIER, RobotType.LAUNCHER, RobotType.LAUNCHER
     };
     // number of rounds producing items randomly before producing an anchor is required
     static final int nextAnchorRound = 30;
@@ -612,13 +628,31 @@ public strictfp class RobotPlayer {
         // produce first few items as scheduled in array `initialRobots`
         if (state < initialRobots.length) {
             boolean robotBuilt = false;
-            for (Direction dir : Direction.values()) {
-                if (rc.canBuildRobot(initialRobots[state], rc.getLocation().add(dir))) {
-                    rc.buildRobot(initialRobots[state], rc.getLocation().add(dir));
+//            for (Direction dir : Direction.values()) {
+//                if (rc.canBuildRobot(initialRobots[state], rc.getLocation().add(dir))) {
+//                    rc.buildRobot(initialRobots[state], rc.getLocation().add(dir));
+//                    robotBuilt = true;
+//                    break;
+//                }
+//            }
+
+            // randomly select one location on the rim of the HQ to build a robot
+            MapLocation[] rimLocs = getCircleRimLocs(rc.getLocation(), getActDis());
+            // randomly select the first robot
+            do {
+                RobotType curType = initialRobots[Math.abs(rng.nextInt()) % initialRobots.length];
+                MapLocation curLoc = rimLocs[Math.abs(rng.nextInt()) % 16];
+                if (rc.canBuildRobot(curType, curLoc)) {
+                    rc.buildRobot(curType, curLoc);
                     robotBuilt = true;
+                } else{
                     break;
                 }
-            }
+            } while(true);
+
+
+
+
             if (robotBuilt) {
                 state++;
             }
