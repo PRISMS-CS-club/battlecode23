@@ -3,7 +3,6 @@ package prisms10;
 import battlecode.common.*;
 
 import java.util.*;
-import java.util.List;
 
 /**
  * RobotPlayer is the class that describes your main robot strategy.
@@ -28,7 +27,7 @@ public strictfp class RobotPlayer {
      *
      * @param rc The RobotController object. You use it to perform actions from this robot, and to get
      *           information on its current status. Essentially your portal to interacting with the world.
-     **/
+     */
     @SuppressWarnings("unused")
     public static void run(RobotController rc) throws GameActionException {
 
@@ -109,6 +108,7 @@ public strictfp class RobotPlayer {
             public int getSt() {
                 return SMEM_IDX_WELLS;
             }
+
             @Override
             public int getEd() {
                 return SMEM_IDX_HQ;
@@ -119,24 +119,27 @@ public strictfp class RobotPlayer {
             public int getSt() {
                 return SMEM_IDX_HQ;
             }
+
             @Override
             public int getEd() {
                 return SMEM_IDX_SKY_ISLAND;
             }
-        }, SKY_ISLAND{
+        }, SKY_ISLAND {
             @Override
             public int getSt() {
                 return SMEM_IDX_SKY_ISLAND;
             }
+
             @Override
             public int getEd() {
                 return SMEM_IDX_ENEMY_HQ;
             }
-        }, ENEMY_HQ{
+        }, ENEMY_HQ {
             @Override
             public int getSt() {
                 return SMEM_IDX_ENEMY_HQ;
             }
+
             @Override
             public int getEd() {
                 return SMEM_IDX_ENEMY_HQ_END;
@@ -237,8 +240,6 @@ public strictfp class RobotPlayer {
     }
 
 
-
-
     static int existInShMem(RobotController rc, int x, MemTypes type) throws GameActionException {
         // return -1 if not found, otherwise return the index
         for (int i = type.getSt(); i < type.getEd(); i++) {
@@ -288,9 +289,10 @@ public strictfp class RobotPlayer {
             }
         }
     }
+
     /**
      * read all values in a specific section of shared memory
-     * */
+     */
     static ArrayList<Integer> readShMemBySec(RobotController rc, MemTypes sec) throws GameActionException {
         ArrayList<Integer> locs = new ArrayList<>();
         for (int i = sec.getSt(); i < sec.getEd(); i++) {
@@ -369,7 +371,7 @@ public strictfp class RobotPlayer {
         }
     }
 
-    static int getActDis(){
+    static int getActDis() {
         switch (rType) {
             case HEADQUARTERS:
                 return 9;
@@ -431,7 +433,7 @@ public strictfp class RobotPlayer {
         return ret;
     }
 
-    static MapLocation getRandLoc(RobotController rc){
+    static MapLocation getRandLoc(RobotController rc) {
         return new MapLocation(rng.nextInt(rc.getMapWidth()), rng.nextInt(rc.getMapHeight()));
     }
 
@@ -446,16 +448,15 @@ public strictfp class RobotPlayer {
 //        rc.setIndicatorString("moving toward " + destination);
         // TODO (avoid obstacles)
         MapLocation myLocation = rc.getLocation();
-        if(myLocation.x == destination.x && myLocation.y == destination.y) {
+        if (myLocation.x == destination.x && myLocation.y == destination.y) {
             // if already arrived at the location, return
             return;
         }
-        while(rc.isMovementReady()) {
+        while (rc.isMovementReady()) {
             MapLocation current = rc.getLocation();
             Direction direction = toDirection(destination.x - current.x, destination.y - current.y);
-            boolean canMove = false;   // whether the robot can make a move in this step.
-                                       // if cannot, the robot do not need to go through the same loop
-            if(!toward) {
+            boolean canMove = false;   // whether the robot can make a move in this step. if cannot, the robot do not need to go through the same loop
+            if (!toward) {
                 direction = direction.opposite();
             }
             Direction dirL = direction.rotateLeft(), dirR = direction.rotateRight();
@@ -476,7 +477,7 @@ public strictfp class RobotPlayer {
                 rc.move(dirR.rotateRight());
                 canMove = true;
             }
-            if(!canMove) {
+            if (!canMove) {
                 break;
             }
         }
@@ -530,7 +531,7 @@ public strictfp class RobotPlayer {
         if ((rc.readSharedArray(63) & 0x8000) == 0) {
             rc.writeSharedArray(63, 0x8000);
             // initialize shared memory
-            for (int i = 0; i < SMEM_IDX_ENEMY_HQ_END ; i++) {
+            for (int i = 0; i < SMEM_IDX_ENEMY_HQ_END; i++) {
                 rc.writeSharedArray(i, LOCATION_DEFAULT);
             }
             // initialize nearby well info
@@ -561,10 +562,10 @@ public strictfp class RobotPlayer {
                 if (rc.canBuildRobot(curType, curLoc)) {
                     rc.buildRobot(curType, curLoc);
                     robotBuilt = true;
-                } else{
+                } else {
                     break;
                 }
-            } while(true);
+            } while (true);
             if (robotBuilt) {
                 state++;
             }
@@ -616,7 +617,7 @@ public strictfp class RobotPlayer {
         Anchor anchor = rc.getAnchor();
         // update current state
         rc.setIndicatorString("current state: " + state + ", state counter = " + stateCounter);
-        if(stateCounter > STATE_COUNTER_MAX && anchor == null) {
+        if (stateCounter > STATE_COUNTER_MAX && anchor == null) {
             rc.disintegrate();
         }
         // perform an operation according to its state
@@ -763,10 +764,10 @@ public strictfp class RobotPlayer {
 
     static MapLocation randSelectEnemyHQ(RobotController rc) throws GameActionException {
         ArrayList<MapLocation> enemyHQs = new ArrayList<>();
-        for (int encoded : readShMemBySec(rc, MemTypes.ENEMY_HQ)){
+        for (int encoded : readShMemBySec(rc, MemTypes.ENEMY_HQ)) {
             enemyHQs.add(intToLoc(encoded));
         }
-        if (enemyHQs.size() == 0){
+        if (enemyHQs.size() == 0) {
             return null;
         }
         return enemyHQs.get(Math.abs(rng.nextInt()) % enemyHQs.size());
@@ -779,8 +780,8 @@ public strictfp class RobotPlayer {
         scanForEnemyHQs(rc);
         // try to attack someone
         RobotInfo[] enemyLocation = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
-        for(RobotInfo enemy : enemyLocation) {
-            if(rc.canAttack(enemy.location)) {
+        for (RobotInfo enemy : enemyLocation) {
+            if (rc.canAttack(enemy.location)) {
                 rc.attack(enemy.location);
                 break;
             }
@@ -789,23 +790,23 @@ public strictfp class RobotPlayer {
         switch (state) {
             case 0:
                 float randNum = rng.nextFloat();
-                if(randNum < 0.2) {
+                if (randNum < 0.2) {
                     List<Integer> headquarters = readShMemBySec(rc, MemTypes.HQ);
-                    if(headquarters.size() > 0) {
+                    if (headquarters.size() > 0) {
                         bindTo = intToLoc(headquarters.get(Math.abs(rng.nextInt()) % headquarters.size()));
                         state = 1;
                         break;
                     }
-                } else if(randNum < 0.55) {
+                } else if (randNum < 0.55) {
                     List<Integer> headquarters = readShMemBySec(rc, MemTypes.ENEMY_HQ);
-                    if(headquarters.size() > 0) {
+                    if (headquarters.size() > 0) {
                         bindTo = intToLoc(headquarters.get(Math.abs(rng.nextInt()) % headquarters.size()));
                         state = 1;
                         break;
                     }
-                } else if(randNum < 0.9) {
+                } else if (randNum < 0.9) {
                     List<Integer> skyIsland = readShMemBySec(rc, MemTypes.SKY_ISLAND);
-                    if(skyIsland.size() > 0) {
+                    if (skyIsland.size() > 0) {
                         bindTo = intToLoc(skyIsland.get(Math.abs(rng.nextInt()) % skyIsland.size()));
                         state = 1;
                         break;
@@ -829,9 +830,9 @@ public strictfp class RobotPlayer {
                 break;
             case 1:
                 rc.setIndicatorString("Targeting to " + bindTo.x + ", " + bindTo.y);
-                if(rc.canSenseLocation(bindTo)) {
+                if (rc.canSenseLocation(bindTo)) {
                     RobotInfo robot = rc.senseRobotAtLocation(bindTo);
-                    if(robot != null && robot.getType() == RobotType.HEADQUARTERS && robot.getTeam() == rc.getTeam().opponent()) {
+                    if (robot != null && robot.getType() == RobotType.HEADQUARTERS && robot.getTeam() == rc.getTeam().opponent()) {
                         state = 2;
                     } else {
                         state = 3;
@@ -842,11 +843,11 @@ public strictfp class RobotPlayer {
                 break;
             case 3:
                 // if cannot see the target position, move toward it
-                if(!rc.canSenseLocation(bindTo)) {
+                if (!rc.canSenseLocation(bindTo)) {
                     moveToward(rc, bindTo);
                 }
                 // if moving too close to the target, move away from it
-                if(diagnoDist(bindTo, rc.getLocation()) <= 1) {
+                if (diagnoDist(bindTo, rc.getLocation()) <= 1) {
                     moveToward(rc, bindTo, false);
                 }
                 // otherwise, random move
@@ -860,11 +861,11 @@ public strictfp class RobotPlayer {
                 // TODO (extra launcher blocking the map)
                 MapLocation location = rc.getLocation();
                 rc.setIndicatorString("Staying at position " + location);
-                if(diagnoDist(bindTo, location) > 1) {
+                if (diagnoDist(bindTo, location) > 1) {
                     moveToward(rc, bindTo);
                 } else {
                     Direction windDirection = rc.senseMapInfo(location).getCurrentDirection();
-                    if(windDirection != null && windDirection != Direction.CENTER) {
+                    if (windDirection != null && windDirection != Direction.CENTER) {
                         rc.move(windDirection.opposite());
                     }
                 }
