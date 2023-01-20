@@ -53,14 +53,17 @@ Special:
 | 2      | going from headquarter to sky island |
 | 3      | going back to headquarter            |
 
+To prevent robots from stuck, when an robot stays in state 1, 2, or 3 for more than 450 rounds and not holding an anchor, it will self-destruct.
+
 ### Launcher
 
-| number | meaning                                        |
-|--------|------------------------------------------------|
-| 0      | no target, exploring the map                   |
-| 1      | moving toward the destination                  |
-| 2      | staying in one fixed location without movement |
-| 3      | moving around the target with it kept in sight |
+| number | meaning                                                       |
+|--------|---------------------------------------------------------------|
+| 0      | initial state. if cannot find any work, do random movement    |
+| 1      | moving toward the destination                                 |
+| 2      | staying in one fixed location without movement                |
+| 3      | moving around the target with it kept in sight                |
+| 4      | always do random movement. Do not actively searching for work |
 
 Assignment of launchers
 

@@ -435,7 +435,6 @@ public strictfp class RobotPlayer {
                     continue;
                 }
                 dist[nexPos.x][nexPos.y] = dist[cur.x][cur.y] + 1;
-//                rc.setIndicatorString("pushing " + nexPos + " into pq");
                 nextPq.add(nexPos);
                 prePos.put(nexPos, cur);
             }
@@ -478,10 +477,6 @@ public strictfp class RobotPlayer {
             ret[i + vecs.length * 3] = new MapLocation(cent.x - vecs[i].x, cent.y - vecs[i].y);
         }
 
-        for (int i = 0; i < vecs.length; i++) {
-//            System.out.println("vec: " + vecs[i]);
-        }
-
         return ret;
     }
 
@@ -505,12 +500,16 @@ public strictfp class RobotPlayer {
      *
      * @param rc          robot controller
      * @param destination destination
+     * @param toward      true for moving toward the position, false for moving away from the position
      */
-    static void moveToward(RobotController rc, MapLocation destination) throws GameActionException {
+    static void moveToward(RobotController rc, MapLocation destination, boolean toward) throws GameActionException {
 //        rc.setIndicatorString("moving toward " + destination);
         // TODO (avoid obstacles)
         MapLocation current = rc.getLocation();
         Direction direction = toDirection(destination.x - current.x, destination.y - current.y);
+        if(!toward) {
+            direction = direction.opposite();
+        }
         Direction dirL = direction.rotateLeft(), dirR = direction.rotateRight();
         if (rc.canMove(direction)) {
             rc.move(direction);
@@ -524,6 +523,10 @@ public strictfp class RobotPlayer {
         } else if (rc.canMove(dirR.rotateRight())) {
             rc.move(dirR.rotateRight());
         }
+    }
+
+    static void moveToward(RobotController rc, MapLocation dest) throws GameActionException {
+        moveToward(rc, dest, true);
     }
 
     static final int LOCATION_DEFAULT = 0x3FFF; // 0x3fff = 14 bits of 1s
@@ -548,11 +551,18 @@ public strictfp class RobotPlayer {
 
     static MapLocation bindTo = null;                       // An important location (such as a well) that the robot is bound to
     static int state;                                       // Current state of robot. Its meaning depends on the type of robot
+    static int stateCounter = 0;                            // Number of rounds the robot has been staying in current state
+    static final int STATE_COUNTER_MAX = 450;
     static MapInfo[][] mapInfos = new MapInfo[GameConstants.MAP_MAX_WIDTH][GameConstants.MAP_MAX_HEIGHT];    // What the robot knows about the map
     static int[][] passable = new int[GameConstants.MAP_MAX_WIDTH][GameConstants.MAP_MAX_HEIGHT];    // What the robot knows about the map (passable)
     // 0 -> cannot pass, 1 can pass, -1 unknown
     static RobotType rType;
     static boolean turningLeft = Math.random() < 0.5;              // when facing a wall, should the robot turn left or right?
+
+    static void changeState(int newState) {
+        state = newState;
+        stateCounter = 0;
+    }
 
     /**
      * Run a single turn for a Headquarters.
@@ -640,17 +650,20 @@ public strictfp class RobotPlayer {
         scanForWells(rc);
         scanForSkyIsland(rc);
         scanForEnemyHQs(rc);
+        Anchor anchor = rc.getAnchor();
         // update current state
-        rc.setIndicatorString("current state: " + state);
-
+        rc.setIndicatorString("current state: " + state + ", state counter = " + stateCounter);
+        if(stateCounter > STATE_COUNTER_MAX && anchor == null) {
+            rc.disintegrate();
+        }
         // perform an operation according to its state
         switch (state) {
             case 0:
                 // if the robot is holding an anchor, go to state 2
-                if (rc.getAnchor() != null && bindTo != null) {
-                    state = 2;
+                if (anchor != null && bindTo != null) {
+                    changeState(2);
                     break;
-                } else if (rc.getAnchor() != null) {
+                } else if (anchor != null) {
                     // in wandering state, if can place the anchor, place it immediately
                     if (rc.canPlaceAnchor()) {
                         rc.placeAnchor();
@@ -661,13 +674,13 @@ public strictfp class RobotPlayer {
                     if (rc.canTakeAnchor(bindTo, Anchor.ACCELERATING)) {
                         rc.takeAnchor(bindTo, Anchor.ACCELERATING);
                         bindTo = null;
-                        state = 2;
+                        changeState(2);
                         break;
                     }
                     if (rc.canTakeAnchor(bindTo, Anchor.STANDARD)) {
                         rc.takeAnchor(bindTo, Anchor.STANDARD);
                         bindTo = null;
-                        state = 2;
+                        changeState(2);
                         break;
                     }
                 }
@@ -684,7 +697,7 @@ public strictfp class RobotPlayer {
                     if (locations.size() != 0) {
                         // if the robot can find a well, target toward the well
                         bindTo = locations.get(Math.abs(rng.nextInt()) % locations.size());
-                        state = 1;
+                        changeState(1);
                         break;
                     }
                 }
@@ -696,6 +709,7 @@ public strictfp class RobotPlayer {
                 break;
 
             case 1:
+                stateCounter++;
                 rc.setIndicatorString("Targeting to " + bindTo.x + ", " + bindTo.y);
                 MapLocation current = rc.getLocation();
                 if (rc.canCollectResource(bindTo, -1)) {
@@ -704,7 +718,7 @@ public strictfp class RobotPlayer {
                     rc.collectResource(bindTo, -1);
                     if (rc.getWeight() >= 40) {
                         bindTo = null;
-                        state = 3;
+                        changeState(3);
                     }
                 } else {
                     // otherwise, move toward the destination
@@ -713,6 +727,7 @@ public strictfp class RobotPlayer {
                 break;
 
             case 2:
+                stateCounter++;
                 if (bindTo == null) {
                     int minDist = Integer.MAX_VALUE;
                     for (int i = 0; i < 36; i++) {
@@ -731,17 +746,18 @@ public strictfp class RobotPlayer {
                 if (rc.canPlaceAnchor()) {
                     rc.placeAnchor();
                     bindTo = null;
-                    state = 3;
+                    changeState(3);
                 }
                 // otherwise, walk toward the sky island
                 if (bindTo != null) {
                     moveToward(rc, bindTo);
                 } else {
-                    state = 0;
+                    changeState(0);
                 }
                 break;
 
             case 3:
+                stateCounter++;
                 if (bindTo == null) {
                     // find the headquarter with the smallest distance
                     int minDist = Integer.MAX_VALUE;
@@ -768,23 +784,11 @@ public strictfp class RobotPlayer {
                 if (!transferred) {
                     moveToward(rc, bindTo);
                 } else if (rc.getWeight() <= 0) {
-                    state = 0;
+                    changeState(0);
                 }
                 break;
         }
         // clear up repeated information in locationsToWrite array
-//        for (int location : locationsToWrite) {
-//            for (int i = SHARED_MEMORY_WELLS; i < SHARED_MEMORY_HQ; i++) {
-//                int before = rc.readSharedArray(i);
-//                if (before == location) {
-//                    break;
-//                }
-//                if (before == LOCATION_DEFAULT && rc.canWriteSharedArray(i, location)) {
-//                    rc.writeSharedArray(i, location);
-//                    break;
-//                }
-//            }
-//        }
         writeBackLocs(rc);
     }
 
@@ -809,37 +813,91 @@ public strictfp class RobotPlayer {
         scanForWells(rc);
         scanForSkyIsland(rc);
         scanForEnemyHQs(rc);
-        // Try to attack someone
-        int radius = rc.getType().actionRadiusSquared;
-        Team opponent = rc.getTeam().opponent();
-        RobotInfo[] enemies = rc.senseNearbyRobots(radius, opponent);
-        if (enemies.length >= 0) {
-            // MapLocation toAttack = enemies[0].location;
-            MapLocation toAttack = rc.getLocation().add(Direction.EAST);
-
-            if (rc.canAttack(toAttack)) {
-                rc.setIndicatorString("Attacking");
-                rc.attack(toAttack);
+        // try to attack someone
+        RobotInfo[] enemyLocation = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
+        for(RobotInfo enemy : enemyLocation) {
+            if(rc.canAttack(enemy.location)) {
+                rc.attack(enemy.location);
+                break;
             }
         }
         writeBackLocs(rc);
         switch (state) {
             case 0:
-                rc.setIndicatorString("did not find target, random walk");
+                float randNum = rng.nextFloat();
+                if(randNum < 0.2) {
+                    List<Integer> headquarters = readShMemBySec(rc, MemTypes.HQ);
+                    if(headquarters.size() > 0) {
+                        bindTo = intToLoc(headquarters.get(Math.abs(rng.nextInt()) % headquarters.size()));
+                        state = 1;
+                        break;
+                    }
+                } else if(randNum < 0.55) {
+                    List<Integer> headquarters = readShMemBySec(rc, MemTypes.ENEMY_HQ);
+                    if(headquarters.size() > 0) {
+                        bindTo = intToLoc(headquarters.get(Math.abs(rng.nextInt()) % headquarters.size()));
+                        state = 1;
+                        break;
+                    }
+                } else if(randNum < 0.9) {
+                    List<Integer> skyIsland = readShMemBySec(rc, MemTypes.SKY_ISLAND);
+                    if(skyIsland.size() > 0) {
+                        bindTo = intToLoc(skyIsland.get(Math.abs(rng.nextInt()) % skyIsland.size()));
+                        state = 1;
+                        break;
+                    }
+                } else {
+                    state = 4;
+                }
+            case 4:
                 // explore randomly
                 Direction dir = Direction.values()[rng.nextInt(Direction.values().length)];
                 if (rc.canMove(dir)) {
                     rc.move(dir);
 
                 }
-                if ((bindTo = randSelectEnemyHQ(rc)) != null){
-                    state = 1;
-                }
                 break;
             case 1:
-                rc.setIndicatorString("found enemy HQ, Targeting to " + bindTo.x + ", " + bindTo.y);
-                //                // found enemy headquarters, moving to it
+                rc.setIndicatorString("Targeting to " + bindTo.x + ", " + bindTo.y);
+                if(rc.canSenseLocation(bindTo)) {
+                    RobotInfo robot = rc.senseRobotAtLocation(bindTo);
+                    if(robot != null && robot.getType() == RobotType.HEADQUARTERS && robot.getTeam() == rc.getTeam().opponent()) {
+                        state = 2;
+                    } else {
+                        state = 3;
+                    }
+                    break;
+                }
                 moveToward(rc, bindTo);
+                break;
+            case 3:
+                // if cannot see the target position, move toward it
+                if(!rc.canSenseLocation(bindTo)) {
+                    moveToward(rc, bindTo);
+                }
+                // if moving too close to the target, move away from it
+                if(diagnoDist(bindTo, rc.getLocation()) <= 1) {
+                    moveToward(rc, bindTo, false);
+                }
+                // otherwise, random move
+                Direction dir2 = Direction.values()[rng.nextInt(Direction.values().length)];
+                if (rc.canMove(dir2)) {
+                    rc.move(dir2);
+
+                }
+                break;
+            case 2:
+                // TODO (extra launcher blocking the map)
+                MapLocation location = rc.getLocation();
+                rc.setIndicatorString("Staying at position " + location);
+                if(diagnoDist(bindTo, location) > 1) {
+                    moveToward(rc, bindTo);
+                } else {
+                    Direction windDirection = rc.senseMapInfo(location).getCurrentDirection();
+                    if(windDirection != null && windDirection != Direction.CENTER) {
+                        rc.move(windDirection.opposite());
+                    }
+                }
                 break;
         }
 
@@ -851,7 +909,6 @@ public strictfp class RobotPlayer {
         scanForSkyIsland(rc);
         scanForEnemyHQs(rc);
         Direction dir = Direction.values()[rng.nextInt(Direction.values().length)];
-        rc.setIndicatorString(dir.toString() + " " + rc.canMove(dir));
         if (rc.canMove(dir)) {
             rc.move(dir);
             state++;
