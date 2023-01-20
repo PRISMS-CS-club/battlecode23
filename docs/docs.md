@@ -5,9 +5,10 @@
 ### Address
 
 ```text
-M M X X X X X X X Y Y Y Y Y Y Y
+C C M M X X X X X X Y Y Y Y Y Y
 ```
 
+- `C`: 4 bit counter. Counts the number of robots around a location.
 - `M`: 2 bit mark, indicating the current location's type
     - Wells
         - `01`: Ad well
@@ -17,8 +18,8 @@ M M X X X X X X X Y Y Y Y Y Y Y
         - `00`: empty island
         - `01`: island occupied by our team
         - `10`: island occupied by enemy team
-- `X`: 7 bit x coordinate
-- `Y`: 7 bit y coordinate
+- `X`: 6 bit x coordinate
+- `Y`: 6 bit y coordinate
 
 Special:
 
