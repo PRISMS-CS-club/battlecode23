@@ -505,23 +505,25 @@ public strictfp class RobotPlayer {
     static void moveToward(RobotController rc, MapLocation destination, boolean toward) throws GameActionException {
 //        rc.setIndicatorString("moving toward " + destination);
         // TODO (avoid obstacles)
-        MapLocation current = rc.getLocation();
-        Direction direction = toDirection(destination.x - current.x, destination.y - current.y);
-        if(!toward) {
-            direction = direction.opposite();
-        }
-        Direction dirL = direction.rotateLeft(), dirR = direction.rotateRight();
-        if (rc.canMove(direction)) {
-            rc.move(direction);
-        } else if (rc.canMove(dirL)) {
-            // if the bot cannot move directly toward the destination, try sideways
-            rc.move(dirL);
-        } else if (rc.canMove(dirR)) {
-            rc.move(dirR);
-        } else if (rc.canMove(dirL.rotateLeft())) {
-            rc.move(dirL.rotateLeft());
-        } else if (rc.canMove(dirR.rotateRight())) {
-            rc.move(dirR.rotateRight());
+        while(rc.isMovementReady()) {
+            MapLocation current = rc.getLocation();
+            Direction direction = toDirection(destination.x - current.x, destination.y - current.y);
+            if(!toward) {
+                direction = direction.opposite();
+            }
+            Direction dirL = direction.rotateLeft(), dirR = direction.rotateRight();
+            if (rc.canMove(direction)) {
+                rc.move(direction);
+            } else if (rc.canMove(dirL)) {
+                // if the bot cannot move directly toward the destination, try sideways
+                rc.move(dirL);
+            } else if (rc.canMove(dirR)) {
+                rc.move(dirR);
+            } else if (rc.canMove(dirL.rotateLeft())) {
+                rc.move(dirL.rotateLeft());
+            } else if (rc.canMove(dirR.rotateRight())) {
+                rc.move(dirR.rotateRight());
+            }
         }
     }
 
