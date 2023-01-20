@@ -156,20 +156,24 @@ public strictfp class RobotPlayer {
         abstract int getEd();
     }
 
+    // memory format specification
+    static final int MEMORY_COUNT = 0xC000;
+    static final int MEMORY_MARK = 0x3000;
+    static final int MEMORY_X = 0x0FC0;
+    static final int MEMORY_Y = 0x003F;
+
     // helper functions
     static MapLocation intToLoc(int number) {
-        return new MapLocation((number & 0x3F80) >> 7, number & 0x007F);
-        // 0x3f80 = 1111111110000000 (front 9 bits)
-        // 0x007f = 0000000001111111 (back 7 bits)
-        // store x with 7 bits, and y with 7 bits
+        return new MapLocation((number & MEMORY_X) >> 6, number & MEMORY_Y);
+        // store x with 5 bits, and y with 5 bits
     }
 
     static int locToInt(MapLocation location, ResourceType type) {
-        return ((type.resourceID << 14) + (location.x << 7) + location.y);
+        return (type.resourceID << 12) + ((location.x << 6) + location.y);
     }
 
     static int locToInt(MapLocation location) {
-        return ((location.x << 7) + location.y);
+        return ((location.x << 6) + location.y);
     }
 
     static int teamToInt(Team team, Team myTeam) {
@@ -313,7 +317,7 @@ public strictfp class RobotPlayer {
             Team occupiedTeam = rc.senseTeamOccupyingIsland(islandID);
             int stat = teamToInt(occupiedTeam, myTeam);
             if (islandSharedInfo != LOCATION_DEFAULT) {
-                int islandInfoNew = (islandSharedInfo & 0x3FFF) | (stat << 14);
+                int islandInfoNew = (islandSharedInfo & (MEMORY_X | MEMORY_Y)) | (stat << 12);
                 if (islandInfoNew != islandSharedInfo && rc.canWriteSharedArray(islandID + SMEM_IDX_SKY_ISLAND, islandInfoNew)) {
                     rc.writeSharedArray(islandID + SMEM_IDX_SKY_ISLAND, islandInfoNew);
                 }
@@ -490,7 +494,7 @@ public strictfp class RobotPlayer {
         moveToward(rc, dest, true);
     }
 
-    static final int LOCATION_DEFAULT = 0x3FFF; // 0x3fff = 14 bits of 1s
+    static final int LOCATION_DEFAULT = 0x03FF; // 0x03FF = 10 bits of 1s
 
     /*** constants for headquarters ***/
     // the first few robots the headquarters will build
@@ -598,7 +602,7 @@ public strictfp class RobotPlayer {
                     state++;
                 }
             } else {
-                // probability for amplifier: 48%
+                // probability for amplifier: 4%
                 rc.setIndicatorString("Trying to build an amplifier");
                 if (rc.canBuildRobot(RobotType.AMPLIFIER, newLoc)) {
                     rc.buildRobot(RobotType.AMPLIFIER, newLoc);
@@ -699,7 +703,8 @@ public strictfp class RobotPlayer {
                     int minDist = Integer.MAX_VALUE;
                     for (int i = 0; i < 36; i++) {
                         int read = rc.readSharedArray(i + SMEM_IDX_SKY_ISLAND);
-                        if (read != LOCATION_DEFAULT && ((read & 0xC000) == 0)) {
+                        if (read != LOCATION_DEFAULT && ((read & MEMORY_MARK) == 0)) {
+                            // if the island has not been marked, navigate the bot to it
                             MapLocation skyIsland = intToLoc(read);
                             int distance = diagnoDist(skyIsland, rc.getLocation());
                             if (distance < minDist) {
