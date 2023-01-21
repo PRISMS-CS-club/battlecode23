@@ -1,5 +1,7 @@
 package prisms10.util;
 
+import java.util.Arrays;
+
 public class RandomNumber {
 
     /**
@@ -24,6 +26,26 @@ public class RandomNumber {
 
     public static boolean nextBoolean() {
         return rng.nextBoolean();
+    }
+
+    /**
+     * Randomly select one object from an array giving the weight (or probability) each one being selected
+     * @param objects array of objects
+     * @param probability array of weights. Each element corresponds to the object with same index in object array.
+     * @param <T> type of object
+     * @return a random object being selected.
+     */
+    public static <T> T randomSelect(T[] objects, float[] probability) {
+        float[] prefixSum = probability.clone();
+        for(int i = 1; i < probability.length; i++) {
+            prefixSum[i] += prefixSum[i - 1];
+        }
+        float rand = nextFloat() * prefixSum[prefixSum.length - 1];
+        int index = Arrays.binarySearch(prefixSum, rand);
+        if(index < 0) {
+            index = -index - 1;
+        }
+        return objects[index];
     }
 
 }

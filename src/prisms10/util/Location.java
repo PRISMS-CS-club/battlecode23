@@ -106,7 +106,7 @@ public class Location {
 
     public static MapLocation randSelectEnemyHQ(RobotController rc) throws GameActionException {
         ArrayList<MapLocation> enemyHQs = new ArrayList<>();
-        for (int encoded : SharedMemory.readShMemBySec(rc, MemorySection.ENEMY_HQ)) {
+        for (int encoded : SharedMemory.readBySection(rc, MemorySection.ENEMY_HQ)) {
             enemyHQs.add(MemoryAddress.toLocation(encoded));
         }
         if (enemyHQs.size() == 0) {

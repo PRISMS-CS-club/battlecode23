@@ -16,12 +16,12 @@ public class SharedMemory {
         }
     }
 
-    static int firEmptyInShMem(RobotController rc, MemorySection type) throws GameActionException {
+    static int firstEmpty(RobotController rc, MemorySection type) throws GameActionException {
         // return -1 if not found, otherwise return the index
-        return existInShMem(rc, MemoryAddress.LOCATION_DEFAULT, type);
+        return exist(rc, MemoryAddress.LOCATION_DEFAULT, type);
     }
 
-    public static int existInShMem(RobotController rc, int x, MemorySection type) throws GameActionException {
+    public static int exist(RobotController rc, int x, MemorySection type) throws GameActionException {
         // return -1 if not found, otherwise return the index
         for (int i = type.getStartIdx(); i < type.getEndIdx(); i++) {
             if (rc.readSharedArray(i) == x) {
@@ -51,10 +51,10 @@ public class SharedMemory {
             while (it.hasNext()) {
                 int loc = it.next();
                 int empPos;
-                if (existInShMem(rc, loc, type) != -1) {
+                if (exist(rc, loc, type) != -1) {
                     // already exist, remove it
                     it.remove();
-                } else if ((empPos = firEmptyInShMem(rc, type)) != -1) {
+                } else if ((empPos = firstEmpty(rc, type)) != -1) {
                     // don't exist, need to test if there are still space to write
                     if (rc.canWriteSharedArray(empPos, loc)) {
                         rc.writeSharedArray(empPos, loc);
@@ -69,7 +69,7 @@ public class SharedMemory {
     /**
      * read all values in a specific section of shared memory
      */
-    public static ArrayList<Integer> readShMemBySec(RobotController rc, MemorySection sec) throws GameActionException {
+    public static ArrayList<Integer> readBySection(RobotController rc, MemorySection sec) throws GameActionException {
         ArrayList<Integer> locs = new ArrayList<>();
         for (int i = sec.getStartIdx(); i < sec.getEndIdx(); i++) {
             int loc = rc.readSharedArray(i);

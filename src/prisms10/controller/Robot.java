@@ -7,6 +7,7 @@ import prisms10.memory.SharedMemory;
 import prisms10.util.Location;
 import prisms10.util.RandomNumber;
 
+import java.util.Arrays;
 import java.util.Set;
 
 public class Robot {
@@ -16,6 +17,10 @@ public class Robot {
 
     Robot(RobotController rc) {
         this.rc = rc;
+        this.gridWeight = new float[rc.getMapHeight()][rc.getMapWidth()];
+        for (float[] row : gridWeight) {
+            Arrays.fill(row, 50);
+        }
     }
 
 
@@ -26,6 +31,7 @@ public class Robot {
     MapInfo[][] mapInfos = new MapInfo[GameConstants.MAP_MAX_WIDTH][GameConstants.MAP_MAX_HEIGHT];    // What the robot knows about the map
     int[][] passable = new int[GameConstants.MAP_MAX_WIDTH][GameConstants.MAP_MAX_HEIGHT];    // What the robot knows about the map (passable)
     // 0 -> cannot pass, 1 can pass, -1 unknown
+    float[][] gridWeight = null;                     // assign a weight to each grid
 
     void changeState(int newState) {
         state = newState;
@@ -126,7 +132,7 @@ public class Robot {
                 // make sure this is an enemy headquarters
                 int s = MemoryAddress.fromLocation(robot.getLocation());
                 boolean toWrite = true;
-                if (SharedMemory.existInShMem(rc, s, MemorySection.ENEMY_HQ) == -1) {
+                if (SharedMemory.exist(rc, s, MemorySection.ENEMY_HQ) == -1) {
                     Set<Integer> enemyHQlocs = SharedMemory.locsToWrite.get(MemorySection.ENEMY_HQ);
                     assert enemyHQlocs != null : "locationsToWrite should be initialized in static block";
                     enemyHQlocs.add(s);

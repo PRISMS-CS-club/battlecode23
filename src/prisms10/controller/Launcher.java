@@ -37,21 +37,21 @@ public class Launcher extends Robot {
             case 0:
                 float randNum = RandomNumber.nextFloat();
                 if (randNum < 0.2) {
-                    List<Integer> headquarters = SharedMemory.readShMemBySec(rc, MemorySection.HQ);
+                    List<Integer> headquarters = SharedMemory.readBySection(rc, MemorySection.HQ);
                     if (headquarters.size() > 0) {
                         bindTo = MemoryAddress.toLocation(headquarters.get(Math.abs(RandomNumber.nextInt()) % headquarters.size()));
                         state = 1;
                         break;
                     }
                 } else if (randNum < 0.55) {
-                    List<Integer> headquarters = SharedMemory.readShMemBySec(rc, MemorySection.ENEMY_HQ);
+                    List<Integer> headquarters = SharedMemory.readBySection(rc, MemorySection.ENEMY_HQ);
                     if (headquarters.size() > 0) {
                         bindTo = MemoryAddress.toLocation(headquarters.get(Math.abs(RandomNumber.nextInt()) % headquarters.size()));
                         state = 1;
                         break;
                     }
                 } else if (randNum < 0.9) {
-                    List<Integer> skyIsland = SharedMemory.readShMemBySec(rc, MemorySection.SKY_ISLAND);
+                    List<Integer> skyIsland = SharedMemory.readBySection(rc, MemorySection.SKY_ISLAND);
                     if (skyIsland.size() > 0) {
                         bindTo = MemoryAddress.toLocation(skyIsland.get(Math.abs(RandomNumber.nextInt()) % skyIsland.size()));
                         state = 1;

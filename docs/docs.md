@@ -74,3 +74,17 @@ Assignment of launchers
 | at enemy's base    | 35%    |
 | around sky islands | 35%    |
 | random moving      | 10%    |
+
+## Grid Weight
+
+Each grid is assigned with a grid weight.
+
+Grid weight is determined by many factors:
+- Initially, the weight on each grid is a constant number `GridWeight.INITIAL`.
+- Each headquarter will affect the nearby grid weights.
+  - A grid `d` Euclidean distance away from our headquarter will decrease weight by `GridWeight.HQ * exp(-d^2/2)`.
+  - A grid `d` Euclidean distance away from enemy's headquarter will increase weight by `GridWeight.HQ * exp(-d^2/2)`.
+- Each mine will affect the nearby grid weight
+  - A grid `d` Euclidean distance away from a mine will increase weight by `GridWeight.HQ * exp(-d^2/2)`
+
+Grid weight determines the probability of each step in random moving. When an robot is moving randomly, it will select one of eight grids around it with grid weight being selection probability.
