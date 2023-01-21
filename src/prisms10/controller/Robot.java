@@ -12,6 +12,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 public class Robot {
 
@@ -91,17 +94,33 @@ public class Robot {
     }
 
     void randomMove() throws GameActionException {
-        // TODO (fix 'move to occupied location')
+        ArrayList<Integer> myHeadquarters = SharedMemory.readBySection(rc, MemorySection.HQ);
+        ArrayList<Integer> enemyHeadquarters = SharedMemory.readBySection(rc, MemorySection.ENEMY_HQ);
+        ArrayList<Integer> wells = SharedMemory.readBySection(rc, MemorySection.WELL);
         MapLocation curLoc = rc.getLocation();
-        calcGridWeightAround(curLoc);
+        // calculate each point's grid weight
         boolean canMove = false;
         float[] nearbyGrid = new float[Direction.values().length];
         for(int i = 0; i < Direction.values().length; i++) {
             if(rc.canMove(Direction.values()[i])) {
+                // calculate grid weight of this point
                 MapLocation afterMove = curLoc.add(Direction.values()[i]);
-                nearbyGrid[i] = gridWeight[afterMove.x][afterMove.y];
+                nearbyGrid[i] = GridWeight.INITIAL;
+                for(Integer myHQ : myHeadquarters) {
+                    MapLocation myHQLoc = MemoryAddress.toLocation(myHQ);
+                    nearbyGrid[i] -= Math.max(0, GridWeight.HQ - Location.sqEuclidDistance(afterMove, myHQLoc) * GridWeight.HQ_DECAY);
+                }
+                for(Integer enemyHQ : enemyHeadquarters) {
+                    MapLocation enemyHQLoc = MemoryAddress.toLocation(enemyHQ);
+                    nearbyGrid[i] += Math.max(0, GridWeight.HQ - Location.sqEuclidDistance(afterMove, enemyHQLoc) * GridWeight.HQ_DECAY);
+                }
+                for(Integer well : wells) {
+                    MapLocation wellLoc = MemoryAddress.toLocation(well);
+                    nearbyGrid[i] += Math.max(0, GridWeight.WELL - Location.sqEuclidDistance(afterMove, wellLoc) * GridWeight.WELL_DECAY);
+                }
                 canMove = true;
             } else {
+                // if cannot move here, set the place's probability to 0
                 nearbyGrid[i] = 0;
             }
         }
@@ -187,38 +206,6 @@ public class Robot {
                 rc.writeSharedArray(islandID + MemorySection.IDX_SKY_ISLAND, locationInt);
             }
         }
-    }
-
-    /**
-     * Calculate the grid weight of all the neighbors around a location
-     * @param location a given location
-     */
-    public void calcGridWeightAround(MapLocation location) throws GameActionException {
-        // TODO (high bytecode cost)
-        ArrayList<Integer> myHeadquarters = SharedMemory.readBySection(rc, MemorySection.HQ);
-        ArrayList<Integer> enemyHeadquarters = SharedMemory.readBySection(rc, MemorySection.ENEMY_HQ);
-        ArrayList<Integer> wells = SharedMemory.readBySection(rc, MemorySection.WELL);
-        int mapWidth = rc.getMapWidth();
-        int mapHeight = rc.getMapHeight();
-        for(Direction dir : Direction.values()) {
-            MapLocation newLoc = location.add(dir);
-            if(newLoc.x >= 0 && newLoc.x < mapWidth && newLoc.y >= 0 && newLoc.y < mapHeight) {
-                gridWeight[newLoc.x][newLoc.y] = GridWeight.INITIAL;
-                for(Integer myHQ : myHeadquarters) {
-                    MapLocation myHQLoc = MemoryAddress.toLocation(myHQ);
-                    gridWeight[newLoc.x][newLoc.y] -= Math.max(0, GridWeight.HQ - Location.sqEuclidDistance(newLoc, myHQLoc) * GridWeight.HQ_DECAY);
-                }
-                for(Integer enemyHQ : enemyHeadquarters) {
-                    MapLocation enemyHQLoc = MemoryAddress.toLocation(enemyHQ);
-                    gridWeight[newLoc.x][newLoc.y] += Math.max(0, GridWeight.HQ - Location.sqEuclidDistance(newLoc, enemyHQLoc) * GridWeight.HQ_DECAY);
-                }
-                for(Integer well : wells) {
-                    MapLocation wellLoc = MemoryAddress.toLocation(well);
-                    gridWeight[newLoc.x][newLoc.y] += Math.max(0, GridWeight.WELL - Location.sqEuclidDistance(newLoc, wellLoc) * GridWeight.WELL_DECAY);
-                }
-            }
-        }
-        rc.setIndicatorString("finish calculating grid weight");
     }
 
 
