@@ -188,10 +188,6 @@ public strictfp class RobotPlayer {
         return Integer.compare(x, 0);
     }
 
-    static int taxicabDistance(MapLocation loc1, MapLocation loc2) {
-        return Math.abs(loc2.x - loc1.x) + Math.abs(loc2.y - loc1.y);
-    }
-
     /**
      * Scanning all wells around a robot. If found any new well, record it into shared memory
      *
@@ -209,7 +205,7 @@ public strictfp class RobotPlayer {
                 }
             }
             if (toWrite) {
-                ArrayList<Integer> wellLocs = locsToWrite.get(MemTypes.WELL);
+                Set<Integer> wellLocs = locsToWrite.get(MemTypes.WELL);
                 assert wellLocs != null : "locationsToWrite should be initialized in static block";
                 wellLocs.add(s);
             }
@@ -236,7 +232,7 @@ public strictfp class RobotPlayer {
                 int s = locToInt(robot.getLocation());
                 boolean toWrite = true;
                 if (existInShMem(rc, s, MemTypes.ENEMY_HQ) == -1) {
-                    ArrayList<Integer> enemyHQlocs = locsToWrite.get(MemTypes.ENEMY_HQ);
+                    Set<Integer> enemyHQlocs = locsToWrite.get(MemTypes.ENEMY_HQ);
                     assert enemyHQlocs != null : "locationsToWrite should be initialized in static block";
                     enemyHQlocs.add(s);
                 }
@@ -276,7 +272,7 @@ public strictfp class RobotPlayer {
         for (MemTypes type : MemTypes.values()) {
             int st = type.getSt();
             int ed = type.getEd();
-            ArrayList<Integer> locs = locsToWrite.get(type);
+            Set<Integer> locs = locsToWrite.get(type);
             assert locs != null : "locationsToWrite should be initialized in static block";
             Iterator<Integer> it = locs.iterator();
             while (it.hasNext()) {
@@ -348,6 +344,18 @@ public strictfp class RobotPlayer {
         int dx = Math.abs(loc1.x - loc2.x);
         int dy = Math.abs(loc1.y - loc2.y);
         return Math.max(dx, dy);
+    }
+
+    /**
+     * Square of Euclidean distance between two points
+     * @param loc1 first location
+     * @param loc2 second location
+     * @return Euclidean distance squared
+     */
+    static int sqEuclidDistance(MapLocation loc1, MapLocation loc2) {
+        int dx = loc1.x - loc2.x;
+        int dy = loc1.y - loc2.y;
+        return dx * dx + dy * dy;
     }
 
     /**
@@ -449,49 +457,42 @@ public strictfp class RobotPlayer {
      * @param rc          robot controller
      * @param destination destination
      * @param toward      true for moving toward the position, false for moving away from the position
+     * @param performMove if the robot need to actually perform the movement, or only return the destination but not move to it
+     * @return MapLocation the final position of the robot
      */
-    static void moveToward(RobotController rc, MapLocation destination, boolean toward) throws GameActionException {
+    static MapLocation moveToward(RobotController rc, MapLocation destination, boolean toward, boolean performMove) throws GameActionException {
 //        rc.setIndicatorString("moving toward " + destination);
         // TODO (avoid obstacles)
         MapLocation myLocation = rc.getLocation();
-        if(myLocation.x == destination.x && myLocation.y == destination.y) {
-            // if already arrived at the location, return
-            return;
-        }
-        while(rc.isMovementReady()) {
-            MapLocation current = rc.getLocation();
-            Direction direction = toDirection(destination.x - current.x, destination.y - current.y);
-            boolean canMove = false;   // whether the robot can make a move in this step.
-                                       // if cannot, the robot do not need to go through the same loop
+        boolean rotateDir = rng.nextBoolean();  // when one cannot move toward one direction, whether to rotate left or right
+        while(rc.isMovementReady() && (myLocation.x != destination.x || myLocation.y != destination.y)) {
+            Direction direction = toDirection(destination.x - myLocation.x, destination.y - myLocation.y);
             if(!toward) {
                 direction = direction.opposite();
             }
-            Direction dirL = direction.rotateLeft(), dirR = direction.rotateRight();
-            if (rc.canMove(direction)) {
-                rc.move(direction);
-                canMove = true;
-            } else if (rc.canMove(dirL)) {
-                // if the bot cannot move directly toward the destination, try sideways
-                rc.move(dirL);
-                canMove = true;
-            } else if (rc.canMove(dirR)) {
-                rc.move(dirR);
-                canMove = true;
-            } else if (rc.canMove(dirL.rotateLeft())) {
-                rc.move(dirL.rotateLeft());
-                canMove = true;
-            } else if (rc.canMove(dirR.rotateRight())) {
-                rc.move(dirR.rotateRight());
-                canMove = true;
+            boolean canMove = false;
+            for(int i = 0; i < 8; i++) {
+                // search either clockwise or counterclockwise for the first direction the bot can move to
+                // search for at most 8 rounds
+                if(rc.canMove(direction)) {
+                    if(performMove) {
+                        rc.move(direction);
+                    }
+                    myLocation = myLocation.add(direction);
+                    canMove = true;
+                    break;
+                }
+                direction = rotateDir? direction.rotateLeft(): direction.rotateRight();
             }
             if(!canMove) {
                 break;
             }
         }
+        return myLocation;
     }
 
     static void moveToward(RobotController rc, MapLocation dest) throws GameActionException {
-        moveToward(rc, dest, true);
+        moveToward(rc, dest, true, true);
     }
 
     static final int LOCATION_DEFAULT = 0x03FF; // 0x03FF = 10 bits of 1s
@@ -506,11 +507,11 @@ public strictfp class RobotPlayer {
 
     /*** local variables kept by each robot ***/
 //    static Set<Integer> locationsToWrite = new HashSet<>(); // Every important location that is scheduled to record into shared memory
-    static HashMap<MemTypes, ArrayList<Integer>> locsToWrite = new HashMap<>();
+    static HashMap<MemTypes, Set<Integer>> locsToWrite = new HashMap<>();
 
     static {
         for (MemTypes type : MemTypes.values()) {
-            locsToWrite.put(type, new ArrayList<>());
+            locsToWrite.put(type, new HashSet<>());
         }
     }
 
@@ -835,6 +836,7 @@ public strictfp class RobotPlayer {
 
                 }
                 break;
+
             case 1:
                 rc.setIndicatorString("Targeting to " + bindTo.x + ", " + bindTo.y);
                 if(rc.canSenseLocation(bindTo)) {
@@ -848,6 +850,7 @@ public strictfp class RobotPlayer {
                 }
                 moveToward(rc, bindTo);
                 break;
+
             case 3:
                 // if cannot see the target position, move toward it
                 if(!rc.canSenseLocation(bindTo)) {
@@ -855,20 +858,21 @@ public strictfp class RobotPlayer {
                 }
                 // if moving too close to the target, move away from it
                 if(diagnoDist(bindTo, rc.getLocation()) <= 1) {
-                    moveToward(rc, bindTo, false);
+                    moveToward(rc, bindTo, false, true);
                 }
                 // otherwise, random move
                 Direction dir2 = Direction.values()[rng.nextInt(Direction.values().length)];
                 if (rc.canMove(dir2)) {
                     rc.move(dir2);
-
                 }
                 break;
+
             case 2:
                 // TODO (extra launcher blocking the map)
                 MapLocation location = rc.getLocation();
                 rc.setIndicatorString("Staying at position " + location);
-                if(diagnoDist(bindTo, location) > 1) {
+                // because headquarter's action radius is 9, the launcher have to stay 9 distance away from headquarter
+                if(sqEuclidDistance(bindTo, moveToward(rc, bindTo, true, false)) > 9) {
                     moveToward(rc, bindTo);
                 } else {
                     Direction windDirection = rc.senseMapInfo(location).getCurrentDirection();
