@@ -560,7 +560,6 @@ public strictfp class RobotPlayer {
         }
         // produce first few items as scheduled in array `initialRobots`
         if (state < initialRobots.length) {
-            boolean robotBuilt = false;
             // randomly select one location on the rim of the HQ to build a robot
             MapLocation[] rimLocs = getCircleRimLocs(rc.getLocation(), getActDis());
             // randomly select the first robot
@@ -569,12 +568,11 @@ public strictfp class RobotPlayer {
                 MapLocation curLoc = rimLocs[Math.abs(rng.nextInt()) % 16];
                 if (rc.canBuildRobot(curType, curLoc)) {
                     rc.buildRobot(curType, curLoc);
-                    robotBuilt = true;
                     state++;
                 } else {
                     break;
                 }
-            } while(true);
+            } while(state < initialRobots.length);
         } else if (state == initialRobots.length + nextAnchorRound) {
             // produce an anchor on specific state
             if (rc.canBuildAnchor(Anchor.STANDARD)) {
