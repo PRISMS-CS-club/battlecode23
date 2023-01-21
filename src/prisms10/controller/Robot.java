@@ -4,10 +4,13 @@ import battlecode.common.*;
 import prisms10.memory.MemoryAddress;
 import prisms10.memory.MemorySection;
 import prisms10.memory.SharedMemory;
+import prisms10.util.GridWeight;
 import prisms10.util.Location;
 import prisms10.util.RandomNumber;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Random;
 import java.util.Set;
 
 public class Robot {
@@ -17,10 +20,7 @@ public class Robot {
 
     Robot(RobotController rc) {
         this.rc = rc;
-        this.gridWeight = new float[rc.getMapHeight()][rc.getMapWidth()];
-        for (float[] row : gridWeight) {
-            Arrays.fill(row, 50);
-        }
+        this.gridWeight = new float[rc.getMapWidth()][rc.getMapHeight()];
     }
 
 
@@ -88,6 +88,28 @@ public class Robot {
 
     void moveToward(MapLocation dest) throws GameActionException {
         moveToward(dest, true, true);
+    }
+
+    void randomMove() throws GameActionException {
+        // TODO (fix 'move to occupied location')
+        MapLocation curLoc = rc.getLocation();
+        calcGridWeightAround(curLoc);
+        boolean canMove = false;
+        float[] nearbyGrid = new float[Direction.values().length];
+        for(int i = 0; i < Direction.values().length; i++) {
+            if(rc.canMove(Direction.values()[i])) {
+                MapLocation afterMove = curLoc.add(Direction.values()[i]);
+                nearbyGrid[i] = gridWeight[afterMove.x][afterMove.y];
+                canMove = true;
+            } else {
+                nearbyGrid[i] = 0;
+            }
+        }
+        if(!canMove) {
+            return;
+        }
+        Direction randSelect = RandomNumber.randomSelect(Direction.values(), nearbyGrid);
+        rc.move(randSelect);
     }
 
 
@@ -165,6 +187,38 @@ public class Robot {
                 rc.writeSharedArray(islandID + MemorySection.IDX_SKY_ISLAND, locationInt);
             }
         }
+    }
+
+    /**
+     * Calculate the grid weight of all the neighbors around a location
+     * @param location a given location
+     */
+    public void calcGridWeightAround(MapLocation location) throws GameActionException {
+        // TODO (high bytecode cost)
+        ArrayList<Integer> myHeadquarters = SharedMemory.readBySection(rc, MemorySection.HQ);
+        ArrayList<Integer> enemyHeadquarters = SharedMemory.readBySection(rc, MemorySection.ENEMY_HQ);
+        ArrayList<Integer> wells = SharedMemory.readBySection(rc, MemorySection.WELL);
+        int mapWidth = rc.getMapWidth();
+        int mapHeight = rc.getMapHeight();
+        for(Direction dir : Direction.values()) {
+            MapLocation newLoc = location.add(dir);
+            if(newLoc.x >= 0 && newLoc.x < mapWidth && newLoc.y >= 0 && newLoc.y < mapHeight) {
+                gridWeight[newLoc.x][newLoc.y] = GridWeight.INITIAL;
+                for(Integer myHQ : myHeadquarters) {
+                    MapLocation myHQLoc = MemoryAddress.toLocation(myHQ);
+                    gridWeight[newLoc.x][newLoc.y] -= GridWeight.HQ * Math.exp(-Location.sqEuclidDistance(newLoc, myHQLoc) / 25.0F);
+                }
+                for(Integer enemyHQ : enemyHeadquarters) {
+                    MapLocation enemyHQLoc = MemoryAddress.toLocation(enemyHQ);
+                    gridWeight[newLoc.x][newLoc.y] += GridWeight.HQ * Math.exp(-Location.sqEuclidDistance(newLoc, enemyHQLoc) / 25.0F);
+                }
+                for(Integer well : wells) {
+                    MapLocation wellLoc = MemoryAddress.toLocation(well);
+                    gridWeight[newLoc.x][newLoc.y] += GridWeight.WELL * Math.exp(-Location.sqEuclidDistance(newLoc, wellLoc) / 8.0F);
+                }
+            }
+        }
+        rc.setIndicatorString("finish calculating grid weight");
     }
 
 

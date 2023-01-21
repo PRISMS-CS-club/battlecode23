@@ -68,11 +68,7 @@ public class Launcher extends Robot {
                 }
             case 4:
                 // explore randomly
-                Direction dir = Direction.values()[RandomNumber.nextInt(Direction.values().length)];
-                if (rc.canMove(dir)) {
-                    rc.move(dir);
-
-                }
+                randomMove();
                 break;
             case 1:
                 rc.setIndicatorString("Targeting to " + bindTo.x + ", " + bindTo.y);

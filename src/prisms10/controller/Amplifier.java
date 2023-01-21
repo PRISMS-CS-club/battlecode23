@@ -14,11 +14,7 @@ public class Amplifier extends Robot {
     @Override
     public void run() throws GameActionException {
         super.run();
-        Direction dir = Direction.values()[RandomNumber.nextInt(Direction.values().length)];
-        if (rc.canMove(dir)) {
-            rc.move(dir);
-            state++;
-        }
+        randomMove();
         SharedMemory.writeBackLocs(rc);
     }
 

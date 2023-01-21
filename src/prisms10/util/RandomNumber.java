@@ -32,20 +32,31 @@ public class RandomNumber {
      * Randomly select one object from an array giving the weight (or probability) each one being selected
      * @param objects array of objects
      * @param probability array of weights. Each element corresponds to the object with same index in object array.
+     *                    The data should guarantee that elements in probability array are all non-negative and at least one positive.
      * @param <T> type of object
      * @return a random object being selected.
      */
     public static <T> T randomSelect(T[] objects, float[] probability) {
         float[] prefixSum = probability.clone();
-        for(int i = 1; i < probability.length; i++) {
+        for(int i = 1; i < prefixSum.length; i++) {
             prefixSum[i] += prefixSum[i - 1];
         }
         float rand = nextFloat() * prefixSum[prefixSum.length - 1];
-        int index = Arrays.binarySearch(prefixSum, rand);
-        if(index < 0) {
-            index = -index - 1;
-        }
+        int index = upperBound(prefixSum, rand, -1, prefixSum.length);
         return objects[index];
+    }
+
+    // search for the smallest number greater than given number in the given range of array
+    private static int upperBound(float[] array, float number, int left, int right) {
+        if(right - left == 1) {
+            return right;
+        }
+        int mid = (left + right) / 2;
+        if(number >= array[mid]) {
+            return upperBound(array, number, mid, right);
+        } else {
+            return upperBound(array, number, left, mid);
+        }
     }
 
 }

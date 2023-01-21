@@ -44,7 +44,7 @@ public class Location {
 
     /**
      * A helper function used for a* search, returns the estimated cost (g-cost)
-     * It is diagonal distance, because we are allowed to move in 8 directions
+     * It is diagonal distance, because we are allowed to move` in 8 directions
      *
      * @param loc1 start location
      * @param loc2 end location
