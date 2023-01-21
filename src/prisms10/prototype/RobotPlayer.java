@@ -471,7 +471,7 @@ public strictfp class RobotPlayer {
                 direction = direction.opposite();
             }
             boolean canMove = false;
-            for(int i = 0; i < 8; i++) {
+            for(int i = 0; i < 6; i++) {
                 // search either clockwise or counterclockwise for the first direction the bot can move to
                 // search for at most 8 rounds
                 if(rc.canMove(direction)) {
@@ -565,18 +565,16 @@ public strictfp class RobotPlayer {
             MapLocation[] rimLocs = getCircleRimLocs(rc.getLocation(), getActDis());
             // randomly select the first robot
             do {
-                RobotType curType = initialRobots[Math.abs(rng.nextInt()) % initialRobots.length];
+                RobotType curType = initialRobots[state];
                 MapLocation curLoc = rimLocs[Math.abs(rng.nextInt()) % 16];
                 if (rc.canBuildRobot(curType, curLoc)) {
                     rc.buildRobot(curType, curLoc);
                     robotBuilt = true;
-                } else{
+                    state++;
+                } else {
                     break;
                 }
             } while(true);
-            if (robotBuilt) {
-                state++;
-            }
         } else if (state == initialRobots.length + nextAnchorRound) {
             // produce an anchor on specific state
             if (rc.canBuildAnchor(Anchor.STANDARD)) {
