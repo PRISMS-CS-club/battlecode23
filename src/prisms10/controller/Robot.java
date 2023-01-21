@@ -206,15 +206,15 @@ public class Robot {
                 gridWeight[newLoc.x][newLoc.y] = GridWeight.INITIAL;
                 for(Integer myHQ : myHeadquarters) {
                     MapLocation myHQLoc = MemoryAddress.toLocation(myHQ);
-                    gridWeight[newLoc.x][newLoc.y] -= GridWeight.HQ * Math.exp(-Location.sqEuclidDistance(newLoc, myHQLoc) / 25.0F);
+                    gridWeight[newLoc.x][newLoc.y] -= Math.max(0, GridWeight.HQ - Location.sqEuclidDistance(newLoc, myHQLoc) * GridWeight.HQ_DECAY);
                 }
                 for(Integer enemyHQ : enemyHeadquarters) {
                     MapLocation enemyHQLoc = MemoryAddress.toLocation(enemyHQ);
-                    gridWeight[newLoc.x][newLoc.y] += GridWeight.HQ * Math.exp(-Location.sqEuclidDistance(newLoc, enemyHQLoc) / 25.0F);
+                    gridWeight[newLoc.x][newLoc.y] += Math.max(0, GridWeight.HQ - Location.sqEuclidDistance(newLoc, enemyHQLoc) * GridWeight.HQ_DECAY);
                 }
                 for(Integer well : wells) {
                     MapLocation wellLoc = MemoryAddress.toLocation(well);
-                    gridWeight[newLoc.x][newLoc.y] += GridWeight.WELL * Math.exp(-Location.sqEuclidDistance(newLoc, wellLoc) / 8.0F);
+                    gridWeight[newLoc.x][newLoc.y] += Math.max(0, GridWeight.WELL - Location.sqEuclidDistance(newLoc, wellLoc) * GridWeight.WELL_DECAY);
                 }
             }
         }
