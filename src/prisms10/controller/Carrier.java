@@ -12,6 +12,8 @@ import java.util.List;
 
 public class Carrier extends Robot {
 
+    private int bindToIslandID;  // if the carrier is moving an anchor to an island, this field sets to the island ID it binds to
+
     public Carrier(RobotController rc) {
         super(rc);
         robotType = RobotType.CARRIER;
@@ -105,6 +107,7 @@ public class Carrier extends Robot {
             case 2:
                 stateCounter++;
                 if (bindTo == null) {
+                    bindToIslandID = -1;
                     int minDist = Integer.MAX_VALUE;
                     for (int i = 0; i < 36; i++) {
                         int read = rc.readSharedArray(i + MemorySection.IDX_SKY_ISLAND);
@@ -115,14 +118,14 @@ public class Carrier extends Robot {
                             if (distance < minDist) {
                                 minDist = distance;
                                 bindTo = skyIsland;
+                                bindToIslandID = i;
                             }
                         }
                     }
                 }
-                // if can place anchor, place it
-                if (rc.canPlaceAnchor()) {
+                // if arrived at bindTo location and can place anchor, place it
+                if (rc.senseIsland(rc.getLocation()) == bindToIslandID && rc.canPlaceAnchor()) {
                     rc.placeAnchor();
-                    bindTo = null;
                     changeState(3);
                 }
                 // otherwise, walk toward the sky island
