@@ -20,7 +20,7 @@ public strictfp class RobotPlayer {
      * @param rc The RobotController object. You use it to perform actions from this robot, and to get
      *           information on its current status. Essentially your portal to interacting with the world.
      */
-    @SuppressWarnings("unused")
+    @SuppressWarnings({"unused", "InfiniteLoopStatement"})
     public static void run(RobotController rc) throws GameActionException {
 
         Robot robot = null;
