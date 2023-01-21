@@ -1,6 +1,7 @@
 package prisms10.prototype;
 
 import battlecode.common.*;
+
 import java.util.*;
 import java.util.List;
 
@@ -104,25 +105,79 @@ public strictfp class RobotPlayer {
             {Direction.WEST, Direction.CENTER, Direction.EAST},
             {Direction.NORTHWEST, Direction.NORTH, Direction.NORTHEAST}
     };
-    static final int SHARED_MEMORY_WELLS = 0;         // starting position of well section in shared memory
-    static final int SHARED_MEMORY_HEADQUARTERS = 8;
-    static final int SHARED_MEMORY_SKY_ISLAND = 12;
+    static final int SMEM_IDX_WELLS = 0;         // starting position of well section in shared memory
+    static final int SMEM_IDX_HQ = 8;
+    static final int SMEM_IDX_SKY_ISLAND = 12;
+    static final int SMEM_IDX_ENEMY_HQ = 48;
+    static final int SMEM_IDX_ENEMY_HQ_END = 52;
+
+    public enum MemTypes {
+        WELL {
+            @Override
+            public int getSt() {
+                return SMEM_IDX_WELLS;
+            }
+            @Override
+            public int getEd() {
+                return SMEM_IDX_HQ;
+            }
+        }, HQ {
+            // write getSt and getEd
+            @Override
+            public int getSt() {
+                return SMEM_IDX_HQ;
+            }
+            @Override
+            public int getEd() {
+                return SMEM_IDX_SKY_ISLAND;
+            }
+        }, SKY_ISLAND{
+            @Override
+            public int getSt() {
+                return SMEM_IDX_SKY_ISLAND;
+            }
+            @Override
+            public int getEd() {
+                return SMEM_IDX_ENEMY_HQ;
+            }
+        }, ENEMY_HQ{
+            @Override
+            public int getSt() {
+                return SMEM_IDX_ENEMY_HQ;
+            }
+            @Override
+            public int getEd() {
+                return SMEM_IDX_ENEMY_HQ_END;
+            }
+        };
+
+        abstract int getSt();
+
+        abstract int getEd();
+    }
+
+    // memory format specification
+    static final int MEMORY_COUNT = 0xC000;
+    static final int MEMORY_MARK = 0x3000;
+    static final int MEMORY_X = 0x0FC0;
+    static final int MEMORY_Y = 0x003F;
 
     // helper functions
     static MapLocation intToLoc(int number) {
-        return new MapLocation((number & 0x3F80) >> 7, number & 0x007F);
+        return new MapLocation((number & MEMORY_X) >> 6, number & MEMORY_Y);
+        // store x with 5 bits, and y with 5 bits
     }
 
     static int locToInt(MapLocation location, ResourceType type) {
-        return ((type.resourceID << 14) + (location.x << 7) + location.y);
+        return (type.resourceID << 12) + ((location.x << 6) + location.y);
     }
 
     static int locToInt(MapLocation location) {
-        return ((location.x << 7) + location.y);
+        return ((location.x << 6) + location.y);
     }
 
     static int teamToInt(Team team, Team myTeam) {
-        return (team == Team.NEUTRAL)? 0: ((team == myTeam)? 1: 2);
+        return (team == Team.NEUTRAL) ? 0 : ((team == myTeam) ? 1 : 2);
     }
 
     static Direction toDirection(int dx, int dy) {
@@ -131,10 +186,6 @@ public strictfp class RobotPlayer {
 
     static int sign(int x) {
         return Integer.compare(x, 0);
-    }
-
-    static int taxicabDistance(MapLocation loc1, MapLocation loc2) {
-        return Math.abs(loc2.x - loc1.x) + Math.abs(loc2.y - loc1.y);
     }
 
     /**
@@ -147,43 +198,140 @@ public strictfp class RobotPlayer {
         for (WellInfo well : wells) {
             int s = locToInt(well.getMapLocation(), well.getResourceType());
             boolean toWrite = true;
-            for (int i = SHARED_MEMORY_WELLS; i < SHARED_MEMORY_HEADQUARTERS; i++) {
+            for (int i = SMEM_IDX_WELLS; i < SMEM_IDX_HQ; i++) {
                 if (s == rc.readSharedArray(i)) {
                     toWrite = false;
                     break;
                 }
             }
             if (toWrite) {
-                locationsToWrite.add(s);
+                Set<Integer> wellLocs = locsToWrite.get(MemTypes.WELL);
+                assert wellLocs != null : "locationsToWrite should be initialized in static block";
+                wellLocs.add(s);
             }
         }
     }
+
+    static void scanForEnemyHQs(RobotController rc) throws GameActionException {
+        // first check if all enemy headquarters are found
+        boolean allFound = true;
+        for (int i = MemTypes.ENEMY_HQ.getSt(); i < MemTypes.ENEMY_HQ.getEd(); i++) {
+            if (rc.readSharedArray(i) == LOCATION_DEFAULT) {
+                allFound = false;
+                break;
+            }
+        }
+        if (allFound) {
+            return;
+        }
+
+        RobotInfo[] robots = rc.senseNearbyRobots();
+        for (RobotInfo robot : robots) {
+            if (robot.getType() == RobotType.HEADQUARTERS && robot.getTeam() != rc.getTeam()) {
+                // make sure this is an enemy headquarters
+                int s = locToInt(robot.getLocation());
+                boolean toWrite = true;
+                if (existInShMem(rc, s, MemTypes.ENEMY_HQ) == -1) {
+                    Set<Integer> enemyHQlocs = locsToWrite.get(MemTypes.ENEMY_HQ);
+                    assert enemyHQlocs != null : "locationsToWrite should be initialized in static block";
+                    enemyHQlocs.add(s);
+                }
+            }
+        }
+    }
+
+
+
+
+    static int existInShMem(RobotController rc, int x, MemTypes type) throws GameActionException {
+        // return -1 if not found, otherwise return the index
+        for (int i = type.getSt(); i < type.getEd(); i++) {
+            if (rc.readSharedArray(i) == x) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    static int firEmptyInShMem(RobotController rc, MemTypes type) throws GameActionException {
+        // return -1 if not found, otherwise return the index
+        return existInShMem(rc, LOCATION_DEFAULT, type);
+    }
+
+    static void writeBackLocs(RobotController rc) throws GameActionException {
+//        for (int i = SHARED_MEMORY_WELLS; i < SHARED_MEMORY_HQ; i++) {
+//            if (rc.readSharedArray(i) == 0) {
+//                if (locationsToWrite.size() > 0) {
+//                    rc.writeSharedArray(i, locationsToWrite.remove(0));
+//                } else {
+//                    break;
+//                }
+//            }
+//        }
+        // check different types of locs, and write them back into shared mem
+        for (MemTypes type : MemTypes.values()) {
+            int st = type.getSt();
+            int ed = type.getEd();
+            Set<Integer> locs = locsToWrite.get(type);
+            assert locs != null : "locationsToWrite should be initialized in static block";
+            Iterator<Integer> it = locs.iterator();
+            while (it.hasNext()) {
+                int loc = it.next();
+                int empPos;
+                if (existInShMem(rc, loc, type) != -1) {
+                    // already exist, remove it
+                    it.remove();
+                } else if ((empPos = firEmptyInShMem(rc, type)) != -1) {
+                    // don't exist, need to test if there are still space to write
+                    if (rc.canWriteSharedArray(empPos, loc)) {
+                        rc.writeSharedArray(empPos, loc);
+                        it.remove();
+                    }
+                    // if no space, don't remove
+                }
+            }
+        }
+    }
+    /**
+     * read all values in a specific section of shared memory
+     * */
+    static ArrayList<Integer> readShMemBySec(RobotController rc, MemTypes sec) throws GameActionException {
+        ArrayList<Integer> locs = new ArrayList<>();
+        for (int i = sec.getSt(); i < sec.getEd(); i++) {
+            int loc = rc.readSharedArray(i);
+            if (loc != LOCATION_DEFAULT) {
+                locs.add(loc);
+            }
+        }
+        return locs;
+    }
+
     static void scanForSkyIsland(RobotController rc) throws GameActionException {
-        // TODO (mark who islands are occupied by)
         Team myTeam = rc.getTeam();
-        for(int islandID : rc.senseNearbyIslands()) {
-            int islandSharedInfo = rc.readSharedArray(islandID + SHARED_MEMORY_SKY_ISLAND);
+        for (int islandID : rc.senseNearbyIslands()) {
+            int islandSharedInfo = rc.readSharedArray(islandID + SMEM_IDX_SKY_ISLAND);
             Team occupiedTeam = rc.senseTeamOccupyingIsland(islandID);
             int stat = teamToInt(occupiedTeam, myTeam);
-            if(islandSharedInfo != LOCATION_DEFAULT) {
-                int islandInfoNew = (islandSharedInfo & 0x3FFF) | (stat << 14);
-                if(islandInfoNew != islandSharedInfo && rc.canWriteSharedArray(islandID + SHARED_MEMORY_SKY_ISLAND, islandInfoNew)) {
-                    rc.writeSharedArray(islandID + SHARED_MEMORY_SKY_ISLAND, islandInfoNew);
+            if (islandSharedInfo != LOCATION_DEFAULT) {
+                int islandInfoNew = (islandSharedInfo & (MEMORY_X | MEMORY_Y)) | (stat << 12);
+                if (islandInfoNew != islandSharedInfo && rc.canWriteSharedArray(islandID + SMEM_IDX_SKY_ISLAND, islandInfoNew)) {
+                    rc.writeSharedArray(islandID + SMEM_IDX_SKY_ISLAND, islandInfoNew);
                 }
                 return;
             }
             MapLocation location = new MapLocation(Integer.MAX_VALUE, Integer.MAX_VALUE);
-            for(MapLocation islandLocation : rc.senseNearbyIslandLocations(islandID)) {
-                if(islandLocation.x <= location.x && islandLocation.y <= location.y) {
+            for (MapLocation islandLocation : rc.senseNearbyIslandLocations(islandID)) {
+                if (islandLocation.x <= location.x && islandLocation.y <= location.y) {
                     location = islandLocation;
                 }
             }
             int locationInt = locToInt(location) | (stat << 14);
-            if(rc.canWriteSharedArray(islandID + SHARED_MEMORY_SKY_ISLAND, locationInt)) {
-                rc.writeSharedArray(islandID + SHARED_MEMORY_SKY_ISLAND, locationInt);
+            if (rc.canWriteSharedArray(islandID + SMEM_IDX_SKY_ISLAND, locationInt)) {
+                rc.writeSharedArray(islandID + SMEM_IDX_SKY_ISLAND, locationInt);
             }
         }
     }
+
 
     /**
      * A helper function used for a* search, returns the estimated cost (g-cost)
@@ -199,6 +347,18 @@ public strictfp class RobotPlayer {
     }
 
     /**
+     * Square of Euclidean distance between two points
+     * @param loc1 first location
+     * @param loc2 second location
+     * @return Euclidean distance squared
+     */
+    static int sqEuclidDistance(MapLocation loc1, MapLocation loc2) {
+        int dx = loc1.x - loc2.x;
+        int dy = loc1.y - loc2.y;
+        return dx * dx + dy * dy;
+    }
+
+    /**
      * helper function for a* search, returns the estimated cost plus distance already travelled
      */
     static int aStarHeuristic(int stepUsed, MapLocation loc1, MapLocation loc2) {
@@ -206,8 +366,8 @@ public strictfp class RobotPlayer {
         // f(x) = g(x) + h(x)
     }
 
-    static int getVisDis(){
-        switch (rType){
+    static int getVisDis() {
+        switch (rType) {
             case HEADQUARTERS:
                 return 34;
             case CARRIER:
@@ -225,126 +385,150 @@ public strictfp class RobotPlayer {
         }
     }
 
-    static boolean isInVisRange(MapLocation loc){
-        return (loc.x * loc.x) + (loc.y * loc.y) <= getVisDis();
+    static int getActDis(){
+        switch (rType) {
+            case HEADQUARTERS:
+                return 9;
+            case CARRIER:
+                return 9;
+            case LAUNCHER:
+                return 16;
+            case DESTABILIZER:
+                return 13;
+            default:
+                return -1;
+        }
     }
 
-    static boolean isInVisRange(MapLocation loc1, MapLocation loc2){
+
+    static boolean isInVisRange(MapLocation len) {
+        return (len.x * len.x) + (len.y * len.y) <= getVisDis();
+    }
+
+    static boolean isInVisRange(MapLocation loc1, MapLocation loc2) {
         int dx = loc1.x - loc2.x;
         int dy = loc1.y - loc2.y;
         return (dx * dx) + (dy * dy) <= getVisDis();
     }
 
-    /**
-     * move the robot to destination, returns the step taken
-     * */
-    static int moveTowardInVisRange(RobotController rc, MapLocation destination, boolean doMove) throws GameActionException {
-        assert isInVisRange(rc.getLocation(), destination) : "only support moving in vis range for this function";
-        MapLocation start = rc.getLocation();
-        int[][] dist = new int[rc.getMapWidth()][rc.getMapHeight()];
-        HashMap<MapLocation, MapLocation> prePos = new HashMap<>();
-        boolean reached = false;
 
-        PriorityQueue<MapLocation> nextPq = new PriorityQueue<>(new Comparator<MapLocation>() {
-            public int compare(MapLocation o1, MapLocation o2) {
-                int o1cost = aStarHeuristic(dist[o1.x][o1.y], o1, destination);
-                int o2cost = aStarHeuristic(dist[o2.x][o2.y], o2, destination);
-                // sort the cost from smallest to largest
-                return o2cost - o1cost;
-            }
-        }); // available adjacent locations, sorted by cost from low to high
+    static MapLocation[] getCircleRimLocs(MapLocation cent, int radSqr) {
+        int rad = (int) Math.sqrt(radSqr);
+        MapLocation[] vecs = new MapLocation[rad + 1]; // each x value of radius corresbond to a y value
+        for (int i = 0; i <= rad; i++) {
+            // x^2 + y^2 = r^2
+            // so that y = sqrt(r^2 - x^2)
+            vecs[i] = new MapLocation(i, (int) Math.sqrt(radSqr - i * i));
+        }
+        MapLocation[] ret = new MapLocation[vecs.length * 4];
 
-        dist[start.x][start.y] = 0;
-        nextPq.add(start);
+        // center +x, +y | +x, -y | -x, +y | -x, -y from vec
+        for (int i = 0; i < vecs.length; i++) {
+            ret[i] = new MapLocation(cent.x + vecs[i].x, cent.y + vecs[i].y);
+            ret[i + vecs.length] = new MapLocation(cent.x + vecs[i].x, cent.y - vecs[i].y);
+            ret[i + vecs.length * 2] = new MapLocation(cent.x - vecs[i].x, cent.y + vecs[i].y);
+            ret[i + vecs.length * 3] = new MapLocation(cent.x - vecs[i].x, cent.y - vecs[i].y);
+        }
 
-        while(nextPq.size() >= 0){
-            MapLocation cur = nextPq.poll();
-            if (cur.equals(destination)){
-                reached = true;
-                break;
-            }
-            // test if able to put it in the queue
-            for (Direction dir : Direction.allDirections()){
-                MapLocation nexPos = new MapLocation(dir.dx + cur.x, dir.dy + cur.y);
-                // test if in the range from 0 to rc.getMapWidth() - 1 and 0 to rc.getMapHeight() - 1
-                if (nexPos.x < 0 || nexPos.x > rc.getMapWidth() || nexPos.y < 0 || nexPos.y > rc.getMapHeight()){
-                    continue;
-                }
-                if (passable[nexPos.x][nexPos.y] == -1) {
-                    passable[nexPos.x][nexPos.y] = rc.sensePassability(nexPos) ? 1 : 0;
-                }
-                if (passable[nexPos.x][nexPos.y] == 0){
-                    continue;
-                }
-                dist[nexPos.x][nexPos.y] = dist[cur.x][cur.y] + 1;
-                nextPq.add(nexPos);
-                prePos.put(nexPos, cur);
-            }
-        }
-        if (!reached) return -1;
-        if (!doMove) return dist[destination.x][destination.y];
-        ArrayList<Direction> movPath = new ArrayList<>();
-        MapLocation cur = destination;
-        while(!cur.equals(start)){
-            MapLocation pre = prePos.get(cur);
-            movPath.add(pre.directionTo(cur));
-            cur = pre;
-        }
-        Collections.reverse(movPath);
-        for (Direction dir : movPath){
-            if (rc.canMove(dir)){
-                rc.move(dir);
-            }
-        }
-        return dist[destination.x][destination.y];
+        return ret;
     }
 
+    static MapLocation getClosestLocOnCircToTar(MapLocation cent, int radSqr, MapLocation tar) {
+        MapLocation[] rimLocs = getCircleRimLocs(cent, radSqr);
+        int minDist = Integer.MAX_VALUE;
+        MapLocation ret = null;
+        for (MapLocation loc : rimLocs) {
+            int dist = diagnoDist(loc, tar);
+            if (dist < minDist) {
+                minDist = dist;
+                ret = loc;
+            }
+        }
+        return ret;
+    }
+
+    static MapLocation getRandLoc(RobotController rc){
+        return new MapLocation(rng.nextInt(rc.getMapWidth()), rng.nextInt(rc.getMapHeight()));
+    }
 
     /**
      * Move this robot toward a given position one step.
      *
      * @param rc          robot controller
      * @param destination destination
+     * @param toward      true for moving toward the position, false for moving away from the position
+     * @param performMove if the robot need to actually perform the movement, or only return the destination but not move to it
+     * @return MapLocation the final position of the robot
      */
-    static void moveToward(RobotController rc, MapLocation destination) throws GameActionException {
+    static MapLocation moveToward(RobotController rc, MapLocation destination, boolean toward, boolean performMove) throws GameActionException {
+//        rc.setIndicatorString("moving toward " + destination);
         // TODO (avoid obstacles)
-        MapLocation current = rc.getLocation();
-        Direction direction = toDirection(destination.x - current.x, destination.y - current.y);
-        Direction dirL = direction.rotateLeft(), dirR = direction.rotateRight();
-        if(rc.canMove(direction)) {
-            rc.move(direction);
-        } else if(rc.canMove(dirL)) {
-            // if the bot cannot move directly toward the destination, try sideways
-            rc.move(dirL);
-        } else if(rc.canMove(dirR)) {
-            rc.move(dirR);
-        } else if(rc.canMove(dirL.rotateLeft())) {
-            rc.move(dirL.rotateLeft());
-        } else if(rc.canMove(dirR.rotateRight())) {
-            rc.move(dirR.rotateRight());
+        MapLocation myLocation = rc.getLocation();
+        boolean rotateDir = rng.nextBoolean();  // when one cannot move toward one direction, whether to rotate left or right
+        while(rc.isMovementReady() && (myLocation.x != destination.x || myLocation.y != destination.y)) {
+            Direction direction = toDirection(destination.x - myLocation.x, destination.y - myLocation.y);
+            if(!toward) {
+                direction = direction.opposite();
+            }
+            boolean canMove = false;
+            for(int i = 0; i < 8; i++) {
+                // search either clockwise or counterclockwise for the first direction the bot can move to
+                // search for at most 8 rounds
+                if(rc.canMove(direction)) {
+                    if(performMove) {
+                        rc.move(direction);
+                    }
+                    myLocation = myLocation.add(direction);
+                    canMove = true;
+                    break;
+                }
+                direction = rotateDir? direction.rotateLeft(): direction.rotateRight();
+            }
+            if(!canMove) {
+                break;
+            }
         }
-
+        return myLocation;
     }
 
-    static final int LOCATION_DEFAULT = 0x3FFF;
+    static void moveToward(RobotController rc, MapLocation dest) throws GameActionException {
+        moveToward(rc, dest, true, true);
+    }
+
+    static final int LOCATION_DEFAULT = 0x03FF; // 0x03FF = 10 bits of 1s
 
     /*** constants for headquarters ***/
     // the first few robots the headquarters will build
     static final RobotType[] initialRobots = new RobotType[]{
-            RobotType.AMPLIFIER, RobotType.CARRIER, RobotType.LAUNCHER
+            RobotType.AMPLIFIER, RobotType.CARRIER, RobotType.LAUNCHER, RobotType.LAUNCHER
     };
     // number of rounds producing items randomly before producing an anchor is required
     static final int nextAnchorRound = 30;
 
     /*** local variables kept by each robot ***/
-    static Set<Integer> locationsToWrite = new HashSet<>(); // Every important location that is scheduled to record into shared memory
+//    static Set<Integer> locationsToWrite = new HashSet<>(); // Every important location that is scheduled to record into shared memory
+    static HashMap<MemTypes, Set<Integer>> locsToWrite = new HashMap<>();
+
+    static {
+        for (MemTypes type : MemTypes.values()) {
+            locsToWrite.put(type, new HashSet<>());
+        }
+    }
+
     static MapLocation bindTo = null;                       // An important location (such as a well) that the robot is bound to
     static int state;                                       // Current state of robot. Its meaning depends on the type of robot
+    static int stateCounter = 0;                            // Number of rounds the robot has been staying in current state
+    static final int STATE_COUNTER_MAX = 450;
     static MapInfo[][] mapInfos = new MapInfo[GameConstants.MAP_MAX_WIDTH][GameConstants.MAP_MAX_HEIGHT];    // What the robot knows about the map
     static int[][] passable = new int[GameConstants.MAP_MAX_WIDTH][GameConstants.MAP_MAX_HEIGHT];    // What the robot knows about the map (passable)
     // 0 -> cannot pass, 1 can pass, -1 unknown
     static RobotType rType;
+    static boolean turningLeft = Math.random() < 0.5;              // when facing a wall, should the robot turn left or right?
 
+    static void changeState(int newState) {
+        state = newState;
+        stateCounter = 0;
+    }
 
     /**
      * Run a single turn for a Headquarters.
@@ -355,7 +539,7 @@ public strictfp class RobotPlayer {
         if ((rc.readSharedArray(63) & 0x8000) == 0) {
             rc.writeSharedArray(63, 0x8000);
             // initialize shared memory
-            for (int i = 0; i < 48; i++) {
+            for (int i = 0; i < SMEM_IDX_ENEMY_HQ_END ; i++) {
                 rc.writeSharedArray(i, LOCATION_DEFAULT);
             }
             // initialize nearby well info
@@ -375,21 +559,27 @@ public strictfp class RobotPlayer {
             }
         }
         // produce first few items as scheduled in array `initialRobots`
-        if(state < initialRobots.length) {
+        if (state < initialRobots.length) {
             boolean robotBuilt = false;
-            for(Direction dir : Direction.values()) {
-                if(rc.canBuildRobot(initialRobots[state], rc.getLocation().add(dir))) {
-                    rc.buildRobot(initialRobots[state], rc.getLocation().add(dir));
+            // randomly select one location on the rim of the HQ to build a robot
+            MapLocation[] rimLocs = getCircleRimLocs(rc.getLocation(), getActDis());
+            // randomly select the first robot
+            do {
+                RobotType curType = initialRobots[Math.abs(rng.nextInt()) % initialRobots.length];
+                MapLocation curLoc = rimLocs[Math.abs(rng.nextInt()) % 16];
+                if (rc.canBuildRobot(curType, curLoc)) {
+                    rc.buildRobot(curType, curLoc);
                     robotBuilt = true;
+                } else{
                     break;
                 }
-            }
-            if(robotBuilt) {
+            } while(true);
+            if (robotBuilt) {
                 state++;
             }
-        } else if(state == initialRobots.length + nextAnchorRound) {
+        } else if (state == initialRobots.length + nextAnchorRound) {
             // produce an anchor on specific state
-            if(rc.canBuildAnchor(Anchor.STANDARD)) {
+            if (rc.canBuildAnchor(Anchor.STANDARD)) {
                 rc.buildAnchor(Anchor.STANDARD);
                 state = initialRobots.length;
             }
@@ -405,7 +595,7 @@ public strictfp class RobotPlayer {
                     rc.buildRobot(RobotType.CARRIER, newLoc);
                     state++;
                 }
-            } else if(randNum < 0.96) {
+            } else if (randNum < 0.96) {
                 // probability for launcher: 48%
                 rc.setIndicatorString("Trying to build a launcher");
                 if (rc.canBuildRobot(RobotType.LAUNCHER, newLoc)) {
@@ -413,9 +603,9 @@ public strictfp class RobotPlayer {
                     state++;
                 }
             } else {
-                // probability for amplifier: 48%
+                // probability for amplifier: 4%
                 rc.setIndicatorString("Trying to build an amplifier");
-                if(rc.canBuildRobot(RobotType.AMPLIFIER, newLoc)) {
+                if (rc.canBuildRobot(RobotType.AMPLIFIER, newLoc)) {
                     rc.buildRobot(RobotType.AMPLIFIER, newLoc);
                     state++;
                 }
@@ -431,50 +621,55 @@ public strictfp class RobotPlayer {
         // record information of observed wells and sky islands
         scanForWells(rc);
         scanForSkyIsland(rc);
+        scanForEnemyHQs(rc);
+        Anchor anchor = rc.getAnchor();
         // update current state
-        rc.setIndicatorString("current state: " + state);
+        rc.setIndicatorString("current state: " + state + ", state counter = " + stateCounter);
+        if(stateCounter > STATE_COUNTER_MAX && anchor == null) {
+            rc.disintegrate();
+        }
         // perform an operation according to its state
         switch (state) {
             case 0:
                 // if the robot is holding an anchor, go to state 2
-                if(rc.getAnchor() != null && bindTo != null) {
-                    state = 2;
+                if (anchor != null && bindTo != null) {
+                    changeState(2);
                     break;
-                } else if(rc.getAnchor() != null) {
+                } else if (anchor != null) {
                     // in wandering state, if can place the anchor, place it immediately
-                    if(rc.canPlaceAnchor()) {
+                    if (rc.canPlaceAnchor()) {
                         rc.placeAnchor();
                     }
                 }
                 // try to get an anchor
-                if(bindTo != null) {
-                    if(rc.canTakeAnchor(bindTo, Anchor.ACCELERATING)) {
+                if (bindTo != null) {
+                    if (rc.canTakeAnchor(bindTo, Anchor.ACCELERATING)) {
                         rc.takeAnchor(bindTo, Anchor.ACCELERATING);
                         bindTo = null;
-                        state = 2;
+                        changeState(2);
                         break;
                     }
-                    if(rc.canTakeAnchor(bindTo, Anchor.STANDARD)) {
+                    if (rc.canTakeAnchor(bindTo, Anchor.STANDARD)) {
                         rc.takeAnchor(bindTo, Anchor.STANDARD);
                         bindTo = null;
-                        state = 2;
+                        changeState(2);
                         break;
                     }
                 }
                 // if the bot can still carry stuff, try to find a well
-                if(rc.getWeight() < 40) {
+                if (rc.getWeight() < 40) {
                     List<MapLocation> locations = new ArrayList<>();
-                    for(int i = SHARED_MEMORY_WELLS; i < SHARED_MEMORY_HEADQUARTERS; i++) {
+                    for (int i = SMEM_IDX_WELLS; i < SMEM_IDX_HQ; i++) {
                         // find a valid well and set it for target
                         int pos = rc.readSharedArray(i);
-                        if(pos != LOCATION_DEFAULT) {
+                        if (pos != LOCATION_DEFAULT) {
                             locations.add(intToLoc(pos));
                         }
                     }
-                    if(locations.size() != 0) {
+                    if (locations.size() != 0) {
                         // if the robot can find a well, target toward the well
                         bindTo = locations.get(Math.abs(rng.nextInt()) % locations.size());
-                        state = 1;
+                        changeState(1);
                         break;
                     }
                 }
@@ -486,14 +681,16 @@ public strictfp class RobotPlayer {
                 break;
 
             case 1:
+                stateCounter++;
                 rc.setIndicatorString("Targeting to " + bindTo.x + ", " + bindTo.y);
                 MapLocation current = rc.getLocation();
                 if (rc.canCollectResource(bindTo, -1)) {
+                    rc.setIndicatorString("Collecting resource");
                     // if can collect resource, collect
                     rc.collectResource(bindTo, -1);
                     if (rc.getWeight() >= 40) {
                         bindTo = null;
-                        state = 3;
+                        changeState(3);
                     }
                 } else {
                     // otherwise, move toward the destination
@@ -502,14 +699,16 @@ public strictfp class RobotPlayer {
                 break;
 
             case 2:
-                if(bindTo == null) {
+                stateCounter++;
+                if (bindTo == null) {
                     int minDist = Integer.MAX_VALUE;
-                    for(int i = 0; i < 36; i++) {
-                        int read = rc.readSharedArray(i + SHARED_MEMORY_SKY_ISLAND);
-                        if(read != LOCATION_DEFAULT && ((read & 0xC000) == 0)) {
+                    for (int i = 0; i < 36; i++) {
+                        int read = rc.readSharedArray(i + SMEM_IDX_SKY_ISLAND);
+                        if (read != LOCATION_DEFAULT && ((read & MEMORY_MARK) == 0)) {
+                            // if the island has not been marked, navigate the bot to it
                             MapLocation skyIsland = intToLoc(read);
                             int distance = diagnoDist(skyIsland, rc.getLocation());
-                            if(distance < minDist) {
+                            if (distance < minDist) {
                                 minDist = distance;
                                 bindTo = skyIsland;
                             }
@@ -517,24 +716,25 @@ public strictfp class RobotPlayer {
                     }
                 }
                 // if can place anchor, place it
-                if(rc.canPlaceAnchor()) {
+                if (rc.canPlaceAnchor()) {
                     rc.placeAnchor();
                     bindTo = null;
-                    state = 3;
+                    changeState(3);
                 }
                 // otherwise, walk toward the sky island
-                if(bindTo != null) {
+                if (bindTo != null) {
                     moveToward(rc, bindTo);
                 } else {
-                    state = 0;
+                    changeState(0);
                 }
                 break;
 
             case 3:
+                stateCounter++;
                 if (bindTo == null) {
                     // find the headquarter with the smallest distance
                     int minDist = Integer.MAX_VALUE;
-                    for (int i = SHARED_MEMORY_HEADQUARTERS; i < SHARED_MEMORY_SKY_ISLAND; i++) {
+                    for (int i = SMEM_IDX_HQ; i < SMEM_IDX_SKY_ISLAND; i++) {
                         int read = rc.readSharedArray(i);
                         if (read != LOCATION_DEFAULT) {
                             MapLocation headquarter = intToLoc(read);
@@ -557,75 +757,144 @@ public strictfp class RobotPlayer {
                 if (!transferred) {
                     moveToward(rc, bindTo);
                 } else if (rc.getWeight() <= 0) {
-                    state = 0;
+                    changeState(0);
                 }
                 break;
         }
         // clear up repeated information in locationsToWrite array
-        for(int location : locationsToWrite) {
-            for(int i = SHARED_MEMORY_WELLS; i < SHARED_MEMORY_HEADQUARTERS; i++) {
-                int before = rc.readSharedArray(i);
-                if(before == location) {
-                    break;
-                }
-                if(before == LOCATION_DEFAULT && rc.canWriteSharedArray(i, location)) {
-                    rc.writeSharedArray(i, location);
-                    break;
-                }
-            }
-        }
+        writeBackLocs(rc);
     }
 
     /**
      * Run a single turn for a Launcher.
      * This code is wrapped inside the infinite loop in run(), so it is called once per turn.
      */
+
+    static MapLocation randSelectEnemyHQ(RobotController rc) throws GameActionException {
+        ArrayList<MapLocation> enemyHQs = new ArrayList<>();
+        for (int encoded : readShMemBySec(rc, MemTypes.ENEMY_HQ)){
+            enemyHQs.add(intToLoc(encoded));
+        }
+        if (enemyHQs.size() == 0){
+            return null;
+        }
+        return enemyHQs.get(Math.abs(rng.nextInt()) % enemyHQs.size());
+    }
+
     static void runLauncher(RobotController rc) throws GameActionException {
         // scan for wells in its observable range
         scanForWells(rc);
         scanForSkyIsland(rc);
-        // Try to attack someone
-        int radius = rc.getType().actionRadiusSquared;
-        Team opponent = rc.getTeam().opponent();
-        RobotInfo[] enemies = rc.senseNearbyRobots(radius, opponent);
-        if (enemies.length >= 0) {
-            // MapLocation toAttack = enemies[0].location;
-            MapLocation toAttack = rc.getLocation().add(Direction.EAST);
-
-            if (rc.canAttack(toAttack)) {
-                rc.setIndicatorString("Attacking");
-                rc.attack(toAttack);
+        scanForEnemyHQs(rc);
+        // try to attack someone
+        RobotInfo[] enemyLocation = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
+        for(RobotInfo enemy : enemyLocation) {
+            if(rc.canAttack(enemy.location)) {
+                rc.attack(enemy.location);
+                break;
             }
         }
+        writeBackLocs(rc);
+        switch (state) {
+            case 0:
+                float randNum = rng.nextFloat();
+                if(randNum < 0.2) {
+                    List<Integer> headquarters = readShMemBySec(rc, MemTypes.HQ);
+                    if(headquarters.size() > 0) {
+                        bindTo = intToLoc(headquarters.get(Math.abs(rng.nextInt()) % headquarters.size()));
+                        state = 1;
+                        break;
+                    }
+                } else if(randNum < 0.55) {
+                    List<Integer> headquarters = readShMemBySec(rc, MemTypes.ENEMY_HQ);
+                    if(headquarters.size() > 0) {
+                        bindTo = intToLoc(headquarters.get(Math.abs(rng.nextInt()) % headquarters.size()));
+                        state = 1;
+                        break;
+                    }
+                } else if(randNum < 0.9) {
+                    List<Integer> skyIsland = readShMemBySec(rc, MemTypes.SKY_ISLAND);
+                    if(skyIsland.size() > 0) {
+                        bindTo = intToLoc(skyIsland.get(Math.abs(rng.nextInt()) % skyIsland.size()));
+                        state = 1;
+                        break;
+                    }
+                } else {
+                    bindTo = getRandLoc(rc);
+                    moveToward(rc, bindTo);
+                    rc.setIndicatorString("moving to randomly assigned location " + bindTo);
+                    if (diagnoDist(rc.getLocation(), bindTo) < 5) {
+                        bindTo = null;
+                        state = 4;
+                    }
+                }
+            case 4:
+                // explore randomly
+                Direction dir = Direction.values()[rng.nextInt(Direction.values().length)];
+                if (rc.canMove(dir)) {
+                    rc.move(dir);
 
-        // Also try to move randomly.
-        Direction dir = Direction.values()[rng.nextInt(Direction.values().length)];
-        if (rc.canMove(dir)) {
-            rc.move(dir);
-        }
-        // clear up repeated information in locationsToWrite array
-        for(int location : locationsToWrite) {
-            for(int i = SHARED_MEMORY_WELLS; i < SHARED_MEMORY_HEADQUARTERS; i++) {
-                int before = rc.readSharedArray(i);
-                if(before == location) {
+                }
+                break;
+
+            case 1:
+                rc.setIndicatorString("Targeting to " + bindTo.x + ", " + bindTo.y);
+                if(rc.canSenseLocation(bindTo)) {
+                    RobotInfo robot = rc.senseRobotAtLocation(bindTo);
+                    if(robot != null && robot.getType() == RobotType.HEADQUARTERS && robot.getTeam() == rc.getTeam().opponent()) {
+                        state = 2;
+                    } else {
+                        state = 3;
+                    }
                     break;
                 }
-                if(before == LOCATION_DEFAULT && rc.canWriteSharedArray(i, location)) {
-                    rc.writeSharedArray(i, location);
-                    break;
+                moveToward(rc, bindTo);
+                break;
+
+            case 3:
+                // if cannot see the target position, move toward it
+                if(!rc.canSenseLocation(bindTo)) {
+                    moveToward(rc, bindTo);
                 }
-            }
+                // if moving too close to the target, move away from it
+                if(diagnoDist(bindTo, rc.getLocation()) <= 1) {
+                    moveToward(rc, bindTo, false, true);
+                }
+                // otherwise, random move
+                Direction dir2 = Direction.values()[rng.nextInt(Direction.values().length)];
+                if (rc.canMove(dir2)) {
+                    rc.move(dir2);
+                }
+                break;
+
+            case 2:
+                // TODO (extra launcher blocking the map)
+                MapLocation location = rc.getLocation();
+                rc.setIndicatorString("Staying at position " + location);
+                // because headquarter's action radius is 9, the launcher have to stay 9 distance away from headquarter
+                if(sqEuclidDistance(bindTo, moveToward(rc, bindTo, true, false)) > 9) {
+                    moveToward(rc, bindTo);
+                } else {
+                    Direction windDirection = rc.senseMapInfo(location).getCurrentDirection();
+                    if(windDirection != null && windDirection != Direction.CENTER) {
+                        rc.move(windDirection.opposite());
+                    }
+                }
+                break;
         }
+
+
     }
 
     static void runAmplifier(RobotController rc) throws GameActionException {
         scanForWells(rc);
         scanForSkyIsland(rc);
+        scanForEnemyHQs(rc);
         Direction dir = Direction.values()[rng.nextInt(Direction.values().length)];
-        rc.setIndicatorString(dir.toString() + " " + rc.canMove(dir));
         if (rc.canMove(dir)) {
             rc.move(dir);
             state++;
         }
+        writeBackLocs(rc);
     }
 }
