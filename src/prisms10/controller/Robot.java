@@ -5,7 +5,7 @@ import prisms10.memory.MemoryAddress;
 import prisms10.memory.MemorySection;
 import prisms10.memory.SharedMemory;
 import prisms10.util.Location;
-import prisms10.util.Random;
+import prisms10.util.RandomNumber;
 
 import java.util.Set;
 
@@ -53,7 +53,7 @@ public class Robot {
 //        rc.setIndicatorString("moving toward " + destination);
         // TODO (avoid obstacles)
         MapLocation myLocation = rc.getLocation();
-        boolean rotateDir = Random.nextBoolean();  // when one cannot move toward one direction, whether to rotate left or right
+        boolean rotateDir = RandomNumber.nextBoolean();  // when one cannot move toward one direction, whether to rotate left or right
         while (rc.isMovementReady() && (myLocation.x != destination.x || myLocation.y != destination.y)) {
             Direction direction = Location.toDirection(destination.x - myLocation.x, destination.y - myLocation.y);
             if (!toward) {

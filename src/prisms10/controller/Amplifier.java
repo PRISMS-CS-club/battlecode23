@@ -2,7 +2,7 @@ package prisms10.controller;
 
 import battlecode.common.*;
 import prisms10.memory.SharedMemory;
-import prisms10.util.Random;
+import prisms10.util.RandomNumber;
 
 public class Amplifier extends Robot {
 
@@ -14,7 +14,7 @@ public class Amplifier extends Robot {
     @Override
     public void run() throws GameActionException {
         super.run();
-        Direction dir = Direction.values()[Random.nextInt(Direction.values().length)];
+        Direction dir = Direction.values()[RandomNumber.nextInt(Direction.values().length)];
         if (rc.canMove(dir)) {
             rc.move(dir);
             state++;

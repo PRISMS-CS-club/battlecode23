@@ -100,7 +100,7 @@ public class Location {
     }
 
     public static MapLocation getRandLoc(RobotController rc) {
-        return new MapLocation(Random.nextInt(rc.getMapWidth()), Random.nextInt(rc.getMapHeight()));
+        return new MapLocation(RandomNumber.nextInt(rc.getMapWidth()), RandomNumber.nextInt(rc.getMapHeight()));
     }
 
 
@@ -112,7 +112,7 @@ public class Location {
         if (enemyHQs.size() == 0) {
             return null;
         }
-        return enemyHQs.get(Math.abs(Random.nextInt()) % enemyHQs.size());
+        return enemyHQs.get(Math.abs(RandomNumber.nextInt()) % enemyHQs.size());
     }
 
 

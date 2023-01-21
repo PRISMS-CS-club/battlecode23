@@ -4,7 +4,7 @@ import battlecode.common.*;
 import prisms10.memory.MemoryAddress;
 import prisms10.memory.MemorySection;
 import prisms10.memory.SharedMemory;
-import prisms10.util.Random;
+import prisms10.util.RandomNumber;
 import prisms10.util.Location;
 
 import java.util.List;
@@ -35,25 +35,25 @@ public class Launcher extends Robot {
         SharedMemory.writeBackLocs(rc);
         switch (state) {
             case 0:
-                float randNum = Random.nextFloat();
+                float randNum = RandomNumber.nextFloat();
                 if (randNum < 0.2) {
                     List<Integer> headquarters = SharedMemory.readShMemBySec(rc, MemorySection.HQ);
                     if (headquarters.size() > 0) {
-                        bindTo = MemoryAddress.toLocation(headquarters.get(Math.abs(Random.nextInt()) % headquarters.size()));
+                        bindTo = MemoryAddress.toLocation(headquarters.get(Math.abs(RandomNumber.nextInt()) % headquarters.size()));
                         state = 1;
                         break;
                     }
                 } else if (randNum < 0.55) {
                     List<Integer> headquarters = SharedMemory.readShMemBySec(rc, MemorySection.ENEMY_HQ);
                     if (headquarters.size() > 0) {
-                        bindTo = MemoryAddress.toLocation(headquarters.get(Math.abs(Random.nextInt()) % headquarters.size()));
+                        bindTo = MemoryAddress.toLocation(headquarters.get(Math.abs(RandomNumber.nextInt()) % headquarters.size()));
                         state = 1;
                         break;
                     }
                 } else if (randNum < 0.9) {
                     List<Integer> skyIsland = SharedMemory.readShMemBySec(rc, MemorySection.SKY_ISLAND);
                     if (skyIsland.size() > 0) {
-                        bindTo = MemoryAddress.toLocation(skyIsland.get(Math.abs(Random.nextInt()) % skyIsland.size()));
+                        bindTo = MemoryAddress.toLocation(skyIsland.get(Math.abs(RandomNumber.nextInt()) % skyIsland.size()));
                         state = 1;
                         break;
                     }
@@ -68,7 +68,7 @@ public class Launcher extends Robot {
                 }
             case 4:
                 // explore randomly
-                Direction dir = Direction.values()[Random.nextInt(Direction.values().length)];
+                Direction dir = Direction.values()[RandomNumber.nextInt(Direction.values().length)];
                 if (rc.canMove(dir)) {
                     rc.move(dir);
 
@@ -97,7 +97,7 @@ public class Launcher extends Robot {
                     moveToward(bindTo, false, true);
                 }
                 // otherwise, random move
-                Direction dir2 = Direction.values()[Random.nextInt(Direction.values().length)];
+                Direction dir2 = Direction.values()[RandomNumber.nextInt(Direction.values().length)];
                 if (rc.canMove(dir2)) {
                     rc.move(dir2);
 

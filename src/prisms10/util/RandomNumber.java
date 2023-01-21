@@ -1,6 +1,6 @@
 package prisms10.util;
 
-public class Random {
+public class RandomNumber {
 
     /**
      * A random number generator.
