@@ -27,9 +27,20 @@ public class Location {
         return DIRECTION_MAP[sign(dy) + 1][sign(dx) + 1];
     }
 
-    public static int taxicabDistance(MapLocation loc1, MapLocation loc2) {
-        return Math.abs(loc2.x - loc1.x) + Math.abs(loc2.y - loc1.y);
+
+    /**
+     * Square of Euclidean distance between two points
+     *
+     * @param loc1 first location
+     * @param loc2 second location
+     * @return Euclidean distance squared
+     */
+    public static int sqEuclidDistance(MapLocation loc1, MapLocation loc2) {
+        int dx = loc1.x - loc2.x;
+        int dy = loc1.y - loc2.y;
+        return dx * dx + dy * dy;
     }
+
 
     /**
      * A helper function used for a* search, returns the estimated cost (g-cost)

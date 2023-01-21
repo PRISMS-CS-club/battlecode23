@@ -2,19 +2,17 @@ package prisms10.memory;
 
 import battlecode.common.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
+import java.util.*;
 
 public class SharedMemory {
 
 
     //    static Set<Integer> locationsToWrite = new HashSet<>(); // Every important location that is scheduled to record into shared memory
-    public static HashMap<MemorySection, ArrayList<Integer>> locsToWrite = new HashMap<>();
+    public static HashMap<MemorySection, Set<Integer>> locsToWrite = new HashMap<>();
 
     static {
         for (MemorySection type : MemorySection.values()) {
-            locsToWrite.put(type, new ArrayList<>());
+            locsToWrite.put(type, new HashSet<>());
         }
     }
 
@@ -47,7 +45,7 @@ public class SharedMemory {
         for (MemorySection type : MemorySection.values()) {
             int st = type.getStartIdx();
             int ed = type.getEndIdx();
-            ArrayList<Integer> locs = locsToWrite.get(type);
+            Set<Integer> locs = locsToWrite.get(type);
             assert locs != null : "locationsToWrite should be initialized in static block";
             Iterator<Integer> it = locs.iterator();
             while (it.hasNext()) {

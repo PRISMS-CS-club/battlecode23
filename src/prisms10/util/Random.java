@@ -21,4 +21,9 @@ public class Random {
     public static float nextFloat() {
         return rng.nextFloat();
     }
+
+    public static boolean nextBoolean() {
+        return rng.nextBoolean();
+    }
+
 }

@@ -94,7 +94,7 @@ public class Launcher extends Robot {
                 }
                 // if moving too close to the target, move away from it
                 if (Location.diagonalDist(bindTo, rc.getLocation()) <= 1) {
-                    moveToward(bindTo, false);
+                    moveToward(bindTo, false, true);
                 }
                 // otherwise, random move
                 Direction dir2 = Direction.values()[Random.nextInt(Direction.values().length)];
@@ -107,7 +107,8 @@ public class Launcher extends Robot {
                 // TODO (extra launcher blocking the map)
                 MapLocation location = rc.getLocation();
                 rc.setIndicatorString("Staying at position " + location);
-                if (Location.diagonalDist(bindTo, location) > 1) {
+                // because headquarter's action radius is 9, the launcher have to stay 9 distance away from headquarter
+                if (Location.sqEuclidDistance(bindTo, moveToward(bindTo, true, false)) > 9) {
                     moveToward(bindTo);
                 } else {
                     Direction windDirection = rc.senseMapInfo(location).getCurrentDirection();

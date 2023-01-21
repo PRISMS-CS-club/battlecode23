@@ -5,8 +5,9 @@ import prisms10.memory.MemoryAddress;
 import prisms10.memory.MemorySection;
 import prisms10.memory.SharedMemory;
 import prisms10.util.Location;
+import prisms10.util.Random;
 
-import java.util.ArrayList;
+import java.util.Set;
 
 public class Robot {
 
@@ -45,48 +46,42 @@ public class Robot {
      *
      * @param destination destination
      * @param toward      true for moving toward the position, false for moving away from the position
+     * @param performMove if the robot need to actually perform the movement, or only return the destination but not move to it
+     * @return MapLocation the final position of the robot
      */
-    void moveToward(MapLocation destination, boolean toward) throws GameActionException {
+    MapLocation moveToward(MapLocation destination, boolean toward, boolean performMove) throws GameActionException {
 //        rc.setIndicatorString("moving toward " + destination);
         // TODO (avoid obstacles)
         MapLocation myLocation = rc.getLocation();
-        if (myLocation.x == destination.x && myLocation.y == destination.y) {
-            // if already arrived at the location, return
-            return;
-        }
-        while (rc.isMovementReady()) {
-            MapLocation current = rc.getLocation();
-            Direction direction = Location.toDirection(destination.x - current.x, destination.y - current.y);
-            boolean canMove = false;   // whether the robot can make a move in this step. if cannot, the robot do not need to go through the same loop
+        boolean rotateDir = Random.nextBoolean();  // when one cannot move toward one direction, whether to rotate left or right
+        while (rc.isMovementReady() && (myLocation.x != destination.x || myLocation.y != destination.y)) {
+            Direction direction = Location.toDirection(destination.x - myLocation.x, destination.y - myLocation.y);
             if (!toward) {
                 direction = direction.opposite();
             }
-            Direction dirL = direction.rotateLeft(), dirR = direction.rotateRight();
-            if (rc.canMove(direction)) {
-                rc.move(direction);
-                canMove = true;
-            } else if (rc.canMove(dirL)) {
-                // if the bot cannot move directly toward the destination, try sideways
-                rc.move(dirL);
-                canMove = true;
-            } else if (rc.canMove(dirR)) {
-                rc.move(dirR);
-                canMove = true;
-            } else if (rc.canMove(dirL.rotateLeft())) {
-                rc.move(dirL.rotateLeft());
-                canMove = true;
-            } else if (rc.canMove(dirR.rotateRight())) {
-                rc.move(dirR.rotateRight());
-                canMove = true;
+            boolean canMove = false;
+            for (int i = 0; i < 6; i++) {
+                // search either clockwise or counterclockwise for the first direction the bot can move to
+                // search for at most 8 rounds
+                if (rc.canMove(direction)) {
+                    if (performMove) {
+                        rc.move(direction);
+                    }
+                    myLocation = myLocation.add(direction);
+                    canMove = true;
+                    break;
+                }
+                direction = rotateDir ? direction.rotateLeft() : direction.rotateRight();
             }
             if (!canMove) {
                 break;
             }
         }
+        return myLocation;
     }
 
     void moveToward(MapLocation dest) throws GameActionException {
-        moveToward(dest, true);
+        moveToward(dest, true, true);
     }
 
 
@@ -105,7 +100,7 @@ public class Robot {
                 }
             }
             if (toWrite) {
-                ArrayList<Integer> wellLocs = SharedMemory.locsToWrite.get(MemorySection.WELL);
+                Set<Integer> wellLocs = SharedMemory.locsToWrite.get(MemorySection.WELL);
                 assert wellLocs != null : "locationsToWrite should be initialized in static block";
                 wellLocs.add(s);
             }
@@ -132,7 +127,7 @@ public class Robot {
                 int s = MemoryAddress.fromLocation(robot.getLocation());
                 boolean toWrite = true;
                 if (SharedMemory.existInShMem(rc, s, MemorySection.ENEMY_HQ) == -1) {
-                    ArrayList<Integer> enemyHQlocs = SharedMemory.locsToWrite.get(MemorySection.ENEMY_HQ);
+                    Set<Integer> enemyHQlocs = SharedMemory.locsToWrite.get(MemorySection.ENEMY_HQ);
                     assert enemyHQlocs != null : "locationsToWrite should be initialized in static block";
                     enemyHQlocs.add(s);
                 }
