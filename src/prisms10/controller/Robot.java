@@ -13,6 +13,7 @@ public class Robot {
     RobotType robotType;
 
     Robot(RobotController rc) {
+        Randomness.setSeed(rc.getID());
         this.rc = rc;
         this.gridWeight = new float[rc.getMapWidth()][rc.getMapHeight()];
     }

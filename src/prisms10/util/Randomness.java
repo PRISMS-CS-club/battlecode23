@@ -1,5 +1,7 @@
 package prisms10.util;
 
+import battlecode.common.RobotController;
+
 /**
  * A class that provides a random number generator and random selection related methods.
  */
@@ -13,18 +15,22 @@ public class Randomness {
     private static final java.util.Random rng = new java.util.Random(114514);
 
     public static int nextInt() {
+
         return rng.nextInt();
     }
 
     public static int nextInt(int bound) {
+
         return rng.nextInt(bound);
     }
 
     public static float nextFloat() {
+
         return rng.nextFloat();
     }
 
     public static boolean nextBoolean() {
+
         return rng.nextBoolean();
     }
 
@@ -73,4 +79,7 @@ public class Randomness {
         }
     }
 
+    public static void setSeed(long seed){
+        rng.setSeed(seed);
+    }
 }

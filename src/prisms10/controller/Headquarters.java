@@ -79,15 +79,15 @@ public class Headquarters extends Robot {
                 Direction dir = Direction.values()[Randomness.nextInt(Direction.values().length)];
                 MapLocation newLoc = rc.getLocation().add(dir);
                 float randNum = Randomness.nextFloat();
-                if (randNum < 0.48) {
-                    // probability for carrier: 48%
+                if (randNum < 0.42) {
+                    // probability for carrier: 42%
                     rc.setIndicatorString("Trying to build a carrier");
                     if (rc.canBuildRobot(RobotType.CARRIER, newLoc)) {
                         rc.buildRobot(RobotType.CARRIER, newLoc);
                         state++;
                     } else break;
                 } else if (randNum < 0.96) {
-                    // probability for launcher: 48%
+                    // probability for launcher: 54%
                     rc.setIndicatorString("Trying to build a launcher");
                     if (rc.canBuildRobot(RobotType.LAUNCHER, newLoc)) {
                         rc.buildRobot(RobotType.LAUNCHER, newLoc);

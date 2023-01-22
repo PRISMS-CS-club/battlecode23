@@ -66,12 +66,12 @@ public class Launcher extends Robot {
                     state = 5;
                 }
             case 5:
-                rc.setIndicatorString("moving to randomly assigned location " + bindTo);
                 bindTo = Location.getRandLoc(rc);
+                rc.setIndicatorString("moving to randomly assigned location " + bindTo);
                 moveToward(bindTo);
-                if (Location.diagonalDist(rc.getLocation(), bindTo) < 5) {
+                if (Location.diagonalDist(rc.getLocation(), bindTo) < 3) {
                     bindTo = null;
-                    state = 4;
+                    state = 3;
                     break;
                 }
             case 4:
