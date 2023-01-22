@@ -65,19 +65,21 @@ public class Launcher extends Robot {
                 if (!occupied){
                     state = 5;
                 }
+            case 4:
+                // explore randomly
+                rc.setIndicatorString("exploring randomly");
+                randomMove();
+                break;
             case 5:
-                bindTo = Location.getRandLoc(rc);
+                if(bindTo == null) {
+                    bindTo = Location.getRandLoc(rc);
+                }
                 rc.setIndicatorString("moving to randomly assigned location " + bindTo);
                 moveToward(bindTo);
                 if (Location.diagonalDist(rc.getLocation(), bindTo) < 3) {
                     //// bindTo = null;
                     state = 3;
-                    break;
                 }
-            case 4:
-                // explore randomly
-                rc.setIndicatorString("exploring randomly");
-                randomMove();
                 break;
             case 1:
                 rc.setIndicatorString("Targeting to " + bindTo.x + ", " + bindTo.y);
@@ -94,7 +96,7 @@ public class Launcher extends Robot {
                 break;
             case 3:
                 // if cannot see the target position, move toward it
-                rc.setIndicatorString("moving toward " + bindTo + "with kept in sight");
+                rc.setIndicatorString("moving toward " + bindTo + " with kept in sight");
                 if (!rc.canSenseLocation(bindTo)) {
                     moveToward(bindTo);
                 }
