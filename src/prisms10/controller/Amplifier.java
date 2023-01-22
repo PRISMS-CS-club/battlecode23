@@ -2,7 +2,6 @@ package prisms10.controller;
 
 import battlecode.common.*;
 import prisms10.memory.SharedMemory;
-import prisms10.util.RandomNumber;
 
 public class Amplifier extends Robot {
 

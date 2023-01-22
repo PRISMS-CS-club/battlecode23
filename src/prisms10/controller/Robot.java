@@ -1,20 +1,11 @@
 package prisms10.controller;
 
 import battlecode.common.*;
-import prisms10.memory.MemoryAddress;
-import prisms10.memory.MemorySection;
-import prisms10.memory.SharedMemory;
-import prisms10.util.GridWeight;
-import prisms10.util.Location;
-import prisms10.util.RandomNumber;
+import prisms10.memory.*;
+import prisms10.util.*;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Random;
 import java.util.Set;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.stream.Stream;
 
 public class Robot {
 
@@ -62,7 +53,7 @@ public class Robot {
 //        rc.setIndicatorString("moving toward " + destination);
         // TODO (avoid obstacles)
         MapLocation myLocation = rc.getLocation();
-        boolean rotateDir = RandomNumber.nextBoolean();  // when one cannot move toward one direction, whether to rotate left or right
+        boolean rotateDir = Randomness.nextBoolean();  // when one cannot move toward one direction, whether to rotate left or right
         while (rc.isMovementReady() && (myLocation.x != destination.x || myLocation.y != destination.y)) {
             Direction direction = Location.toDirection(destination.x - myLocation.x, destination.y - myLocation.y);
             if (!toward) {
@@ -101,20 +92,20 @@ public class Robot {
         // calculate each point's grid weight
         boolean canMove = false;
         float[] nearbyGrid = new float[Direction.values().length];
-        for(int i = 0; i < Direction.values().length; i++) {
-            if(rc.canMove(Direction.values()[i])) {
+        for (int i = 0; i < Direction.values().length; i++) {
+            if (rc.canMove(Direction.values()[i])) {
                 // calculate grid weight of this point
                 MapLocation afterMove = curLoc.add(Direction.values()[i]);
                 nearbyGrid[i] = GridWeight.INITIAL;
-                for(Integer myHQ : myHeadquarters) {
+                for (Integer myHQ : myHeadquarters) {
                     MapLocation myHQLoc = MemoryAddress.toLocation(myHQ);
                     nearbyGrid[i] -= Math.max(0, GridWeight.HQ - Location.sqEuclidDistance(afterMove, myHQLoc) * GridWeight.HQ_DECAY);
                 }
-                for(Integer enemyHQ : enemyHeadquarters) {
+                for (Integer enemyHQ : enemyHeadquarters) {
                     MapLocation enemyHQLoc = MemoryAddress.toLocation(enemyHQ);
                     nearbyGrid[i] += Math.max(0, GridWeight.HQ - Location.sqEuclidDistance(afterMove, enemyHQLoc) * GridWeight.HQ_DECAY);
                 }
-                for(Integer well : wells) {
+                for (Integer well : wells) {
                     MapLocation wellLoc = MemoryAddress.toLocation(well);
                     nearbyGrid[i] += Math.max(0, GridWeight.WELL - Location.sqEuclidDistance(afterMove, wellLoc) * GridWeight.WELL_DECAY);
                 }
@@ -124,10 +115,10 @@ public class Robot {
                 nearbyGrid[i] = 0;
             }
         }
-        if(!canMove) {
+        if (!canMove) {
             return;
         }
-        Direction randSelect = RandomNumber.randomSelect(Direction.values(), nearbyGrid);
+        Direction randSelect = Randomness.randomSelect(Direction.values(), nearbyGrid);
         rc.move(randSelect);
     }
 

@@ -4,7 +4,7 @@ import battlecode.common.*;
 import prisms10.memory.MemoryAddress;
 import prisms10.memory.MemorySection;
 import prisms10.util.Location;
-import prisms10.util.RandomNumber;
+import prisms10.util.Randomness;
 
 public class Headquarters extends Robot {
 
@@ -56,7 +56,7 @@ public class Headquarters extends Robot {
             // randomly select the first robot
             do {
                 RobotType curType = initialRobots[state];
-                MapLocation curLoc = rimLocs[Math.abs(RandomNumber.nextInt()) % 16];
+                MapLocation curLoc = rimLocs[Math.abs(Randomness.nextInt()) % 16];
                 if (rc.canBuildRobot(curType, curLoc)) {
                     rc.buildRobot(curType, curLoc);
                     state++;
@@ -73,9 +73,9 @@ public class Headquarters extends Robot {
             }
         } else {
             // Pick a direction to build in.
-            Direction dir = Direction.values()[RandomNumber.nextInt(Direction.values().length)];
+            Direction dir = Direction.values()[Randomness.nextInt(Direction.values().length)];
             MapLocation newLoc = rc.getLocation().add(dir);
-            float randNum = RandomNumber.nextFloat();
+            float randNum = Randomness.nextFloat();
             if (randNum < 0.48) {
                 // probability for carrier: 48%
                 rc.setIndicatorString("Trying to build a carrier");
