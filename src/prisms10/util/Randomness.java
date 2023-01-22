@@ -42,16 +42,26 @@ public class Randomness {
         for (int i = 1; i < prefixSum.length; i++) {
             prefixSum[i] += prefixSum[i - 1];
         }
-        int rand = (int) nextFloat() * prefixSum[prefixSum.length - 1];
+        int rand = (int)(nextFloat() * prefixSum[prefixSum.length - 1]);
         int index = upperBound(prefixSum, rand, -1, prefixSum.length);
         return objects[index];
+    }
+
+    public static <T> T randomSelect(T[] objects, int[] probability, int st, int ed){
+        T[] tmpObjs = (T[]) new Object[ed - st];
+        int[] tmpProbs = new int[ed - st];
+        for (int i = st; i < ed; i++) {
+            tmpObjs[i - st] = objects[i];
+            tmpProbs[i - st] = probability[i];
+        }
+        return randomSelect(tmpObjs, tmpProbs);
     }
 
     /**
      * Finds the index of the first element in array that is greater than the given number.
      * The array should be sorted in ascending order.
      */
-    private static int upperBound(int[] array, int number, int left, int right) {
+    public static int upperBound(int[] array, int number, int left, int right) {
         if (right - left == 1) {
             return right;
         }

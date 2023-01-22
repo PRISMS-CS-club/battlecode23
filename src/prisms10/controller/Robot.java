@@ -5,6 +5,7 @@ import prisms10.memory.*;
 import prisms10.util.*;
 
 import java.util.ArrayList;
+import java.util.Random;
 import java.util.Set;
 
 public class Robot {
@@ -90,36 +91,35 @@ public class Robot {
         ArrayList<Integer> wells = SharedMemory.readBySection(rc, MemorySection.WELL);
         MapLocation curLoc = rc.getLocation();
         // calculate each point's grid weight
-        boolean canMove = false;
         int[] nearbyGrid = new int[Direction.values().length];
+        boolean[] canMoveToDir = new boolean[Direction.values().length];
         for (int i = 0; i < Direction.values().length; i++) {
-            if (rc.canMove(Direction.values()[i])) {
-                // calculate grid weight of this point
-                MapLocation afterMove = curLoc.add(Direction.values()[i]);
-                nearbyGrid[i] = GridWeight.INITIAL;
-                for (Integer myHQ : myHeadquarters) {
-                    MapLocation myHQLoc = MemoryAddress.toLocation(myHQ);
-                    nearbyGrid[i] -= Math.max(0, GridWeight.HQ - Location.sqEuclidDistance(afterMove, myHQLoc) * GridWeight.HQ_DECAY);
-                }
-                for (Integer enemyHQ : enemyHeadquarters) {
-                    MapLocation enemyHQLoc = MemoryAddress.toLocation(enemyHQ);
-                    nearbyGrid[i] += Math.max(0, GridWeight.HQ - Location.sqEuclidDistance(afterMove, enemyHQLoc) * GridWeight.HQ_DECAY);
-                }
-                for (Integer well : wells) {
-                    MapLocation wellLoc = MemoryAddress.toLocation(well);
-                    nearbyGrid[i] += Math.max(0, GridWeight.WELL - Location.sqEuclidDistance(afterMove, wellLoc) * GridWeight.WELL_DECAY);
-                }
-                canMove = true;
-            } else {
-                // if cannot move here, set the place's probability to 0
-                nearbyGrid[i] = 0;
+            canMoveToDir[i] = rc.canMove(Direction.values()[i]);
+
+            // calculate grid weight of this point
+            MapLocation afterMove = curLoc.add(Direction.values()[i]);
+            nearbyGrid[i] = GridWeight.INITIAL;
+            for (Integer myHQ : myHeadquarters) {
+                MapLocation myHQLoc = MemoryAddress.toLocation(myHQ);
+                nearbyGrid[i] -= Math.max(0, GridWeight.HQ - Location.sqEuclidDistance(afterMove, myHQLoc) * GridWeight.HQ_DECAY);
             }
+            for (Integer enemyHQ : enemyHeadquarters) {
+                MapLocation enemyHQLoc = MemoryAddress.toLocation(enemyHQ);
+                nearbyGrid[i] += Math.max(0, GridWeight.HQ - Location.sqEuclidDistance(afterMove, enemyHQLoc) * GridWeight.HQ_DECAY);
+            }
+            for (Integer well : wells) {
+                MapLocation wellLoc = MemoryAddress.toLocation(well);
+                nearbyGrid[i] += Math.max(0, GridWeight.WELL - Location.sqEuclidDistance(afterMove, wellLoc) * GridWeight.WELL_DECAY);
+            }
+
         }
-        if (!canMove) {
-            return;
+
+        Direction randSel = null;
+        while(!rc.canMove(randSel = Randomness.randomSelect(Direction.values(), nearbyGrid))){
+            // rand select until can move
         }
-        Direction randSelect = Randomness.randomSelect(Direction.values(), nearbyGrid);
-        rc.move(randSelect);
+        rc.move(randSel);
+
     }
 
 
