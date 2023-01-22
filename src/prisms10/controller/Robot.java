@@ -92,10 +92,7 @@ public class Robot {
         MapLocation curLoc = rc.getLocation();
         // calculate each point's grid weight
         int[] nearbyGrid = new int[Direction.values().length];
-        boolean[] canMoveToDir = new boolean[Direction.values().length];
-        for (int i = 0; i < Direction.values().length; i++) {
-            canMoveToDir[i] = rc.canMove(Direction.values()[i]);
-
+        for (int i = 0; i < Direction.values().length - 1; i++) {
             // calculate grid weight of this point
             MapLocation afterMove = curLoc.add(Direction.values()[i]);
             nearbyGrid[i] = GridWeight.INITIAL;
@@ -114,12 +111,17 @@ public class Robot {
 
         }
 
-        Direction randSel = null;
-        while(!rc.canMove(randSel = Randomness.randomSelect(Direction.values(), nearbyGrid))){
-            // rand select until can move
+        Direction randSel = Randomness.randomSelect(Direction.values(), nearbyGrid);
+        if (!rc.canMove(randSel)) {
+            for (Direction cur : Direction.values()) {
+                if (rc.canMove(cur)) {
+                    rc.move(cur);
+                    return;
+                }
+            }
+        } else {
+            rc.move(randSel);
         }
-        rc.move(randSel);
-
     }
 
 
