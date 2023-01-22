@@ -65,40 +65,45 @@ public class Headquarters extends Robot {
                 }
             } while (state < initialRobots.length);
 
-        } else if (state == initialRobots.length + nextAnchorRound) {
-            // produce an anchor on specific state
-            if (rc.canBuildAnchor(Anchor.STANDARD)) {
-                rc.buildAnchor(Anchor.STANDARD);
-                state = initialRobots.length;
-            }
-        } else {
-            // Pick a direction to build in.
-            Direction dir = Direction.values()[Randomness.nextInt(Direction.values().length)];
-            MapLocation newLoc = rc.getLocation().add(dir);
-            float randNum = Randomness.nextFloat();
-            if (randNum < 0.48) {
-                // probability for carrier: 48%
-                rc.setIndicatorString("Trying to build a carrier");
-                if (rc.canBuildRobot(RobotType.CARRIER, newLoc)) {
-                    rc.buildRobot(RobotType.CARRIER, newLoc);
-                    state++;
-                }
-            } else if (randNum < 0.96) {
-                // probability for launcher: 48%
-                rc.setIndicatorString("Trying to build a launcher");
-                if (rc.canBuildRobot(RobotType.LAUNCHER, newLoc)) {
-                    rc.buildRobot(RobotType.LAUNCHER, newLoc);
-                    state++;
-                }
+        }
+        while (true) {
+            // repeat until can't build more
+            if (state == initialRobots.length + nextAnchorRound) {
+                // produce an anchor on specific state
+                if (rc.canBuildAnchor(Anchor.STANDARD)) {
+                    rc.buildAnchor(Anchor.STANDARD);
+                    state = initialRobots.length;
+                } else break;
             } else {
-                // probability for amplifier: 4%
-                rc.setIndicatorString("Trying to build an amplifier");
-                if (rc.canBuildRobot(RobotType.AMPLIFIER, newLoc)) {
-                    rc.buildRobot(RobotType.AMPLIFIER, newLoc);
-                    state++;
+                // Pick a direction to build in.
+                Direction dir = Direction.values()[Randomness.nextInt(Direction.values().length)];
+                MapLocation newLoc = rc.getLocation().add(dir);
+                float randNum = Randomness.nextFloat();
+                if (randNum < 0.48) {
+                    // probability for carrier: 48%
+                    rc.setIndicatorString("Trying to build a carrier");
+                    if (rc.canBuildRobot(RobotType.CARRIER, newLoc)) {
+                        rc.buildRobot(RobotType.CARRIER, newLoc);
+                        state++;
+                    } else break;
+                } else if (randNum < 0.96) {
+                    // probability for launcher: 48%
+                    rc.setIndicatorString("Trying to build a launcher");
+                    if (rc.canBuildRobot(RobotType.LAUNCHER, newLoc)) {
+                        rc.buildRobot(RobotType.LAUNCHER, newLoc);
+                        state++;
+                    } else break;
+                } else {
+                    // probability for amplifier: 4%
+                    rc.setIndicatorString("Trying to build an amplifier");
+                    if (rc.canBuildRobot(RobotType.AMPLIFIER, newLoc)) {
+                        rc.buildRobot(RobotType.AMPLIFIER, newLoc);
+                        state++;
+                    } else break;
                 }
             }
         }
+
     }
 
 }

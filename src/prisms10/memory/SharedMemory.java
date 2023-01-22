@@ -32,15 +32,6 @@ public class SharedMemory {
     }
 
     public static void writeBackLocs(RobotController rc) throws GameActionException {
-//        for (int i = SHARED_MEMORY_WELLS; i < SHARED_MEMORY_HQ; i++) {
-//            if (rc.readSharedArray(i) == 0) {
-//                if (locationsToWrite.size() > 0) {
-//                    rc.writeSharedArray(i, locationsToWrite.remove(0));
-//                } else {
-//                    break;
-//                }
-//            }
-//        }
         // check different types of locs, and write them back into shared mem
         for (MemorySection type : MemorySection.values()) {
             int st = type.getStartIdx();
