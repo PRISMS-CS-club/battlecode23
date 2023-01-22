@@ -66,6 +66,7 @@ anchor, it will self-destruct.
 | 2      | staying in one fixed location without movement                                           |
 | 3      | moving around the target with it kept in sight                                           |
 | 4      | always do random movement. Do not actively searching for work                            |
+| 5      | moving to randomly assigned location, when reached, turn to state 4                       |
 
 Assignment of launchers
 

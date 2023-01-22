@@ -35,39 +35,48 @@ public class Launcher extends Robot {
         SharedMemory.writeBackLocs(rc);
         switch (state) {
             case 0:
+                rc.setIndicatorString("initial state");
                 float randNum = Randomness.nextFloat();
+                boolean occupied = false; // see if the launcher have something to do
                 if (randNum < 0.2) {
                     List<Integer> headquarters = SharedMemory.readBySection(rc, MemorySection.HQ);
                     if (headquarters.size() > 0) {
                         bindTo = MemoryAddress.toLocation(headquarters.get(Math.abs(Randomness.nextInt()) % headquarters.size()));
                         state = 1;
-                        break;
+                        occupied = true;
                     }
                 } else if (randNum < 0.55) {
                     List<Integer> headquarters = SharedMemory.readBySection(rc, MemorySection.ENEMY_HQ);
                     if (headquarters.size() > 0) {
                         bindTo = MemoryAddress.toLocation(headquarters.get(Math.abs(Randomness.nextInt()) % headquarters.size()));
                         state = 1;
-                        break;
+                        occupied = true;
                     }
                 } else if (randNum < 0.9) {
                     List<Integer> skyIsland = SharedMemory.readBySection(rc, MemorySection.SKY_ISLAND);
                     if (skyIsland.size() > 0) {
                         bindTo = MemoryAddress.toLocation(skyIsland.get(Math.abs(Randomness.nextInt()) % skyIsland.size()));
                         state = 1;
-                        break;
+                        occupied = true;
                     }
                 } else {
-                    bindTo = Location.getRandLoc(rc);
-                    moveToward(bindTo);
-                    rc.setIndicatorString("moving to randomly assigned location " + bindTo);
-                    if (Location.diagonalDist(rc.getLocation(), bindTo) < 5) {
-                        bindTo = null;
-                        state = 4;
-                    }
+                    state = 5;
+                }
+                if (!occupied){
+                    state = 5;
+                }
+            case 5:
+                rc.setIndicatorString("moving to randomly assigned location " + bindTo);
+                bindTo = Location.getRandLoc(rc);
+                moveToward(bindTo);
+                if (Location.diagonalDist(rc.getLocation(), bindTo) < 5) {
+                    bindTo = null;
+                    state = 4;
+                    break;
                 }
             case 4:
                 // explore randomly
+                rc.setIndicatorString("exploring randomly");
                 randomMove();
                 break;
             case 1:
@@ -85,6 +94,7 @@ public class Launcher extends Robot {
                 break;
             case 3:
                 // if cannot see the target position, move toward it
+                rc.setIndicatorString("moving toward " + bindTo + "with kept in sight");
                 if (!rc.canSenseLocation(bindTo)) {
                     moveToward(bindTo);
                 }
@@ -101,6 +111,7 @@ public class Launcher extends Robot {
                 break;
             case 2:
                 // TODO (extra launcher blocking the map)
+                rc.setIndicatorString("staying the fixed pos");
                 MapLocation location = rc.getLocation();
                 rc.setIndicatorString("Staying at position " + location);
                 // because headquarter's action radius is 9, the launcher have to stay 9 distance away from headquarter
