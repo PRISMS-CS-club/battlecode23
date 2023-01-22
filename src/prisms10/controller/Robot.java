@@ -36,8 +36,8 @@ public class Robot {
     public void run() throws GameActionException {
         // scan nearby environment and record information to shared memory
         scanForWells();
-        scanForSkyIsland();
-        scanForEnemyHQ();
+        scanForSkyIslands();
+        scanForEnemyHQs();
     }
 
 
@@ -145,7 +145,7 @@ public class Robot {
         }
     }
 
-    void scanForEnemyHQ() throws GameActionException {
+    void scanForEnemyHQs() throws GameActionException {
         // first check if all enemy headquarters are found
         boolean allFound = true;
         for (int i = MemorySection.ENEMY_HQ.getStartIdx(); i < MemorySection.ENEMY_HQ.getEndIdx(); i++) {
@@ -173,9 +173,12 @@ public class Robot {
         }
     }
 
-    void scanForSkyIsland() throws GameActionException {
+    void scanForSkyIslands() throws GameActionException {
+
         Team myTeam = rc.getTeam();
+
         for (int islandID : rc.senseNearbyIslands()) {
+
             int islandSharedInfo = rc.readSharedArray(islandID + MemorySection.IDX_SKY_ISLAND);
             Team occupiedTeam = rc.senseTeamOccupyingIsland(islandID);
             int stat = MemoryAddress.fromTeam(occupiedTeam, myTeam);
@@ -196,7 +199,9 @@ public class Robot {
             if (rc.canWriteSharedArray(islandID + MemorySection.IDX_SKY_ISLAND, locationInt)) {
                 rc.writeSharedArray(islandID + MemorySection.IDX_SKY_ISLAND, locationInt);
             }
+
         }
+
     }
 
 
