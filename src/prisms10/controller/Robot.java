@@ -216,44 +216,4 @@ public class Robot {
     }
 
 
-    boolean isInVisRange(MapLocation len) {
-        return (len.x * len.x) + (len.y * len.y) <= getVisDis();
-    }
-
-    boolean isInVisRange(MapLocation loc1, MapLocation loc2) {
-        int dx = loc1.x - loc2.x;
-        int dy = loc1.y - loc2.y;
-        return (dx * dx) + (dy * dy) <= getVisDis();
-    }
-
-
-    int getVisDis() {
-        switch (robotType) {
-            case HEADQUARTERS:
-            case AMPLIFIER:
-                return 34;
-            case CARRIER:
-            case LAUNCHER:
-            case DESTABILIZER:
-            case BOOSTER:
-                return 20;
-            default:
-                return -1;
-        }
-    }
-
-    int getActDis() {
-        switch (robotType) {
-            case HEADQUARTERS:
-            case CARRIER:
-                return 9;
-            case LAUNCHER:
-                return 16;
-            case DESTABILIZER:
-                return 13;
-            default:
-                return -1;
-        }
-    }
-
 }

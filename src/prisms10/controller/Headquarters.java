@@ -52,7 +52,7 @@ public class Headquarters extends Robot {
         // produce first few items as scheduled in array `initialRobots`
         if (state < initialRobots.length) {
             // randomly select one location on the rim of the HQ to build a robot
-            MapLocation[] rimLocs = Location.getCircleRimLocs(rc.getLocation(), getActDis());
+            MapLocation[] rimLocs = Location.getCircleRimLocs(rc.getLocation(), robotType.actionRadiusSquared);
             // randomly select the first robot
             do {
                 RobotType curType = initialRobots[state];
