@@ -147,7 +147,7 @@ public class Robot {
         }
     }
 
-    void scanForEnemyHQs() throws GameActionException {
+    private void scanForEnemyHQs() throws GameActionException {
         // first check if all enemy headquarters are found
         boolean allFound = true;
         for (int i = MemorySection.ENEMY_HQ.getStartIdx(); i < MemorySection.ENEMY_HQ.getEndIdx(); i++) {
@@ -175,7 +175,7 @@ public class Robot {
         }
     }
 
-    void scanForSkyIslands() throws GameActionException {
+    private void scanForSkyIslands() throws GameActionException {
 
         for (int islandID : rc.senseNearbyIslands()) {
 

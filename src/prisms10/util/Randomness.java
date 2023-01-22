@@ -7,10 +7,10 @@ public class Randomness {
 
     /**
      * A random number generator. We will use this RNG to make some random moves. The Random class is provided by the
-     * java.util.Random import at the top of this file. Here, we *seed* the RNG with a constant number (6147); this
+     * java.util.Random import at the top of this file. Here, we *seed* the RNG with a constant number (114514); this
      * makes sure we get the same sequence of numbers every time this code is run. This is very useful for debugging!
      */
-    private static final java.util.Random rng = new java.util.Random(6147);
+    private static final java.util.Random rng = new java.util.Random(114514);
 
     public static int nextInt() {
         return rng.nextInt();
@@ -42,12 +42,12 @@ public class Randomness {
         for (int i = 1; i < prefixSum.length; i++) {
             prefixSum[i] += prefixSum[i - 1];
         }
-        int rand = (int)(nextFloat() * prefixSum[prefixSum.length - 1]);
+        int rand = (int) (nextFloat() * prefixSum[prefixSum.length - 1]);
         int index = upperBound(prefixSum, rand, -1, prefixSum.length);
         return objects[index];
     }
 
-    public static <T> T randomSelect(T[] objects, int[] probability, int st, int ed){
+    public static <T> T randomSelect(T[] objects, int[] probability, int st, int ed) {
         T[] tmpObjs = (T[]) new Object[ed - st];
         int[] tmpProbs = new int[ed - st];
         for (int i = st; i < ed; i++) {
