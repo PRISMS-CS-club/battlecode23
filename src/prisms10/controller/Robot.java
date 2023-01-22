@@ -5,7 +5,6 @@ import prisms10.memory.*;
 import prisms10.util.*;
 
 import java.util.ArrayList;
-import java.util.Random;
 import java.util.Set;
 
 public class Robot {
