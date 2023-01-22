@@ -1,11 +1,11 @@
 package prisms10.util;
 
 public class GridWeight {
-    public static final float INITIAL = 100.0F;
-    public static final float HQ = 50.0F;
-    public static final float HQ_DECAY = 10.0F;
-    public static final float HQ_MAX_RADIUS = HQ / HQ_DECAY;
-    public static final float WELL = 20.0F;
-    public static final float WELL_DECAY = 5.0F;
-    public static final float WELL_MAX_RADIUS = WELL / WELL_DECAY;
+    public static final int INITIAL = 1000;
+    public static final int HQ = 800;
+    public static final int HQ_DECAY = 100;
+    public static final int HQ_MAX_RADIUS = HQ / HQ_DECAY;
+    public static final int WELL = 400;
+    public static final int WELL_DECAY = 50;
+    public static final int WELL_MAX_RADIUS = WELL / WELL_DECAY;
 }

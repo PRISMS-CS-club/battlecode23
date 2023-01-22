@@ -37,12 +37,12 @@ public class Randomness {
      *                    positive.
      * @return the random object selected
      */
-    public static <T> T randomSelect(T[] objects, float[] probability) {
-        float[] prefixSum = probability.clone();
+    public static <T> T randomSelect(T[] objects, int[] probability) {
+        int[] prefixSum = probability.clone();
         for (int i = 1; i < prefixSum.length; i++) {
             prefixSum[i] += prefixSum[i - 1];
         }
-        float rand = nextFloat() * prefixSum[prefixSum.length - 1];
+        int rand = (int) nextFloat() * prefixSum[prefixSum.length - 1];
         int index = upperBound(prefixSum, rand, -1, prefixSum.length);
         return objects[index];
     }
@@ -51,7 +51,7 @@ public class Randomness {
      * Finds the index of the first element in array that is greater than the given number. The array should be sorted
      * in ascending order.
      */
-    private static int upperBound(float[] array, float number, int left, int right) {
+    private static int upperBound(int[] array, int number, int left, int right) {
         if (right - left == 1) {
             return right;
         }

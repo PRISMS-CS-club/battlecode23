@@ -91,7 +91,7 @@ public class Robot {
         MapLocation curLoc = rc.getLocation();
         // calculate each point's grid weight
         boolean canMove = false;
-        float[] nearbyGrid = new float[Direction.values().length];
+        int[] nearbyGrid = new int[Direction.values().length];
         for (int i = 0; i < Direction.values().length; i++) {
             if (rc.canMove(Direction.values()[i])) {
                 // calculate grid weight of this point

@@ -108,7 +108,7 @@ public class Launcher extends Robot {
                     moveToward(bindTo);
                 } else {
                     Direction windDirection = rc.senseMapInfo(location).getCurrentDirection();
-                    if (windDirection != null && windDirection != Direction.CENTER) {
+                    if (windDirection != null && windDirection != Direction.CENTER && rc.canMove(windDirection.opposite())) {
                         rc.move(windDirection.opposite());
                     }
                 }
