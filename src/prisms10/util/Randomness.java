@@ -48,8 +48,8 @@ public class Randomness {
     }
 
     /**
-     * Finds the index of the first element in array that is greater than the given number. The array should be sorted
-     * in ascending order.
+     * Finds the index of the first element in array that is greater than the given number.
+     * The array should be sorted in ascending order.
      */
     private static int upperBound(int[] array, int number, int left, int right) {
         if (right - left == 1) {

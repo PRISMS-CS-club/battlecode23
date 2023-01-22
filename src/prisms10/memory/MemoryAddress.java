@@ -6,26 +6,26 @@ import battlecode.common.Team;
 
 public class MemoryAddress {
 
-    // memory address masks
-    public static final int MEMORY_COUNT = 0xC000;
-    public static final int MEMORY_MARK = 0x3000;
-    public static final int MEMORY_X = 0x0FC0;
-    public static final int MEMORY_Y = 0x003F;
-    public static final int LOCATION_DEFAULT = 0x03FF; // 0x03FF = 10 bits of 1s
+    // Memory address masks
+    public static final int MASK_COUNTER = 0xC000;
+    public static final int MASK_SUBTYPE = 0x3000;
+    public static final int MASK_X_COORDINATE = 0x0FC0;
+    public static final int MASK_Y_COORDINATE = 0x003F;
+    public static final int DEFAULT_COORDINATES = 0x0FFF; // 0x0FFF = 12 bits of 1s
 
 
-    // helper methods
+    // Helper methods
     public static MapLocation toLocation(int address) {
-        return new MapLocation((address & MEMORY_X) >> 6, address & MEMORY_Y);
-        // store x with 5 bits, and y with 5 bits
+        // The x and y coordinates are stored with 6 bits each in the lower 12 bits of the address
+        return new MapLocation((address & MASK_X_COORDINATE) >> 6, address & MASK_Y_COORDINATE);
     }
 
     public static int fromLocation(MapLocation location, ResourceType type) {
-        return (type.resourceID << 12) + ((location.x << 6) + location.y);
+        return (type.resourceID << 12) + fromLocation(location);
     }
 
     public static int fromLocation(MapLocation location) {
-        return ((location.x << 6) + location.y);
+        return (location.x << 6) + location.y;
     }
 
     public static int fromTeam(Team team, Team myTeam) {

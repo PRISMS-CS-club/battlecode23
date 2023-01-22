@@ -5,11 +5,11 @@
 ### Address
 
 ```text
-C C M M X X X X X X Y Y Y Y Y Y
+CCTT XXXX XXYY YYYY
 ```
 
 - `C`: 4 bit counter. Counts the number of robots around a location.
-- `M`: 2 bit mark, indicating the current location's type
+- `T`: 2 bit mark indicating the current location's subtype
     - Wells
         - `01`: Ad well
         - `10`: Mn well
@@ -54,7 +54,8 @@ Special:
 | 2      | going from headquarter to sky island |
 | 3      | going back to headquarter            |
 
-To prevent robots from stuck, when an robot stays in state 1, 2, or 3 for more than 450 rounds and not holding an anchor, it will self-destruct.
+To prevent robots from stuck, when an robot stays in state 1, 2, or 3 for more than 450 rounds and not holding an
+anchor, it will self-destruct.
 
 ### Launcher
 
@@ -80,11 +81,16 @@ Assignment of launchers
 Each grid is assigned with a grid weight.
 
 Grid weight is determined by many factors:
+
 - Initially, the weight on each grid is a constant number `GridWeight.INITIAL`.
 - Each headquarter will affect the nearby grid weights.
-  - A grid `d` Euclidean distance away from our headquarter will decrease weight by `GridWeight.HQ - d * GridWeight.HQ_DECAY` if this number is greater than 0.
-  - A grid `d` Euclidean distance away from enemy's headquarter will increase weight by `GridWeight.HQ - d * GridWeight.HQ_DECAY` if this number is greater than 0.
+    - A grid `d` Euclidean distance away from our headquarter will decrease weight
+      by `GridWeight.HQ - d * GridWeight.HQ_DECAY` if this number is greater than 0.
+    - A grid `d` Euclidean distance away from enemy's headquarter will increase weight
+      by `GridWeight.HQ - d * GridWeight.HQ_DECAY` if this number is greater than 0.
 - Each well will affect the nearby grid weight
-  - A grid `d` Euclidean distance away from a well will increase weight by `GridWeight.WELL - d * GridWeight.WELL_DECAY` if this number is greater than 0.
+    - A grid `d` Euclidean distance away from a well will increase weight
+      by `GridWeight.WELL - d * GridWeight.WELL_DECAY` if this number is greater than 0.
 
-Grid weight determines the probability of each step in random moving. When an robot is moving randomly, it will select one of eight grids around it with grid weight being selection probability.
+Grid weight determines the probability of each step in random moving. When an robot is moving randomly, it will select
+one of eight grids around it with grid weight being selection probability.

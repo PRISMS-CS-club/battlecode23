@@ -149,7 +149,7 @@ public class Robot {
         // first check if all enemy headquarters are found
         boolean allFound = true;
         for (int i = MemorySection.ENEMY_HQ.getStartIdx(); i < MemorySection.ENEMY_HQ.getEndIdx(); i++) {
-            if (rc.readSharedArray(i) == MemoryAddress.LOCATION_DEFAULT) {
+            if (rc.readSharedArray(i) == MemoryAddress.DEFAULT_COORDINATES) {
                 allFound = false;
                 break;
             }
@@ -179,8 +179,8 @@ public class Robot {
             int islandSharedInfo = rc.readSharedArray(islandID + MemorySection.IDX_SKY_ISLAND);
             Team occupiedTeam = rc.senseTeamOccupyingIsland(islandID);
             int stat = MemoryAddress.fromTeam(occupiedTeam, myTeam);
-            if (islandSharedInfo != MemoryAddress.LOCATION_DEFAULT) {
-                int islandInfoNew = (islandSharedInfo & (MemoryAddress.MEMORY_X | MemoryAddress.MEMORY_Y)) | (stat << 12);
+            if (islandSharedInfo != MemoryAddress.DEFAULT_COORDINATES) {
+                int islandInfoNew = (islandSharedInfo & (MemoryAddress.MASK_X_COORDINATE | MemoryAddress.MASK_Y_COORDINATE)) | (stat << 12);
                 if (islandInfoNew != islandSharedInfo && rc.canWriteSharedArray(islandID + MemorySection.IDX_SKY_ISLAND, islandInfoNew)) {
                     rc.writeSharedArray(islandID + MemorySection.IDX_SKY_ISLAND, islandInfoNew);
                 }

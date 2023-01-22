@@ -68,7 +68,7 @@ public class Carrier extends Robot {
                     for (int i = MemorySection.IDX_WELL; i < MemorySection.IDX_HQ; i++) {
                         // find a valid well and set it for target
                         int pos = rc.readSharedArray(i);
-                        if (pos != MemoryAddress.LOCATION_DEFAULT) {
+                        if (pos != MemoryAddress.DEFAULT_COORDINATES) {
                             locations.add(MemoryAddress.toLocation(pos));
                         }
                     }
@@ -111,7 +111,7 @@ public class Carrier extends Robot {
                     int minDist = Integer.MAX_VALUE;
                     for (int i = 0; i < 36; i++) {
                         int read = rc.readSharedArray(i + MemorySection.IDX_SKY_ISLAND);
-                        if (read != MemoryAddress.LOCATION_DEFAULT && ((read & MemoryAddress.MEMORY_MARK) == 0)) {
+                        if (read != MemoryAddress.DEFAULT_COORDINATES && ((read & MemoryAddress.MASK_SUBTYPE) == 0)) {
                             // if the island has not been marked, navigate the bot to it
                             MapLocation skyIsland = MemoryAddress.toLocation(read);
                             int distance = Location.diagonalDist(skyIsland, rc.getLocation());
@@ -143,7 +143,7 @@ public class Carrier extends Robot {
                     int minDist = Integer.MAX_VALUE;
                     for (int i = MemorySection.IDX_HQ; i < MemorySection.IDX_SKY_ISLAND; i++) {
                         int read = rc.readSharedArray(i);
-                        if (read != MemoryAddress.LOCATION_DEFAULT) {
+                        if (read != MemoryAddress.DEFAULT_COORDINATES) {
                             MapLocation headquarter = MemoryAddress.toLocation(read);
                             int distance = Location.diagonalDist(headquarter, rc.getLocation());
                             if (distance < minDist) {
