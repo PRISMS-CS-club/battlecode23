@@ -70,7 +70,7 @@ public class Launcher extends Robot {
                 rc.setIndicatorString("moving to randomly assigned location " + bindTo);
                 moveToward(bindTo);
                 if (Location.diagonalDist(rc.getLocation(), bindTo) < 3) {
-                    bindTo = null;
+                    //// bindTo = null;
                     state = 3;
                     break;
                 }
