@@ -31,7 +31,7 @@ public class Headquarters extends Robot {
             rc.writeSharedArray(63, 0x8000);
             // initialize shared memory
             for (int i = 0; i < MemorySection.IDX_ENEMY_HQ_END; i++) {
-                rc.writeSharedArray(i, MemoryAddress.DEFAULT_COORDINATES);
+                rc.writeSharedArray(i, MemoryAddress.MASK_COORDS);
             }
             // initialize nearby well info
             scanForWells();
@@ -44,7 +44,7 @@ public class Headquarters extends Robot {
                 // repeated information found in shared memory
                 break;
             }
-            if (rc.readSharedArray(i) == MemoryAddress.DEFAULT_COORDINATES) {
+            if (rc.readSharedArray(i) == MemoryAddress.MASK_COORDS) {
                 rc.writeSharedArray(i, currentLocation);
                 break;
             }

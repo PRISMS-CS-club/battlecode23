@@ -18,7 +18,7 @@ public class SharedMemory {
 
     static int firstEmpty(RobotController rc, MemorySection type) throws GameActionException {
         // return -1 if not found, otherwise return the index
-        return exist(rc, MemoryAddress.DEFAULT_COORDINATES, type);
+        return exist(rc, MemoryAddress.MASK_COORDS, type);
     }
 
     public static int exist(RobotController rc, int x, MemorySection type) throws GameActionException {
@@ -73,7 +73,7 @@ public class SharedMemory {
         ArrayList<Integer> locs = new ArrayList<>();
         for (int i = sec.getStartIdx(); i < sec.getEndIdx(); i++) {
             int loc = rc.readSharedArray(i);
-            if (loc != MemoryAddress.DEFAULT_COORDINATES) {
+            if (loc != MemoryAddress.MASK_COORDS) {
                 locs.add(loc);
             }
         }

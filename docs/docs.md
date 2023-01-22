@@ -1,8 +1,6 @@
 # PRISMS 10 robot
 
-## Integer format
-
-### Address
+## Memory address format
 
 ```text
 CCTT XXXX XXYY YYYY

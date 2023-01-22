@@ -35,6 +35,7 @@ public class Robot {
 
     public void run() throws GameActionException {
         // scan nearby environment and record information to shared memory
+        // TODO: reduce redundant scans to save bytecode
         scanForWells();
         scanForSkyIslands();
         scanForEnemyHQs();
@@ -50,8 +51,8 @@ public class Robot {
      * @return MapLocation the final position of the robot
      */
     MapLocation moveToward(MapLocation destination, boolean toward, boolean performMove) throws GameActionException {
-//        rc.setIndicatorString("moving toward " + destination);
-        // TODO (avoid obstacles)
+        // rc.setIndicatorString("moving toward " + destination);
+        // TODO: avoid obstacles
         MapLocation myLocation = rc.getLocation();
         boolean rotateDir = Randomness.nextBoolean();  // when one cannot move toward one direction, whether to rotate left or right
         while (rc.isMovementReady() && (myLocation.x != destination.x || myLocation.y != destination.y)) {
@@ -149,7 +150,7 @@ public class Robot {
         // first check if all enemy headquarters are found
         boolean allFound = true;
         for (int i = MemorySection.ENEMY_HQ.getStartIdx(); i < MemorySection.ENEMY_HQ.getEndIdx(); i++) {
-            if (rc.readSharedArray(i) == MemoryAddress.DEFAULT_COORDINATES) {
+            if (rc.readSharedArray(i) == MemoryAddress.MASK_COORDS) {
                 allFound = false;
                 break;
             }
@@ -175,29 +176,38 @@ public class Robot {
 
     void scanForSkyIslands() throws GameActionException {
 
-        Team myTeam = rc.getTeam();
-
         for (int islandID : rc.senseNearbyIslands()) {
 
-            int islandSharedInfo = rc.readSharedArray(islandID + MemorySection.IDX_SKY_ISLAND);
-            Team occupiedTeam = rc.senseTeamOccupyingIsland(islandID);
-            int stat = MemoryAddress.fromTeam(occupiedTeam, myTeam);
-            if (islandSharedInfo != MemoryAddress.DEFAULT_COORDINATES) {
-                int islandInfoNew = (islandSharedInfo & (MemoryAddress.MASK_X_COORDINATE | MemoryAddress.MASK_Y_COORDINATE)) | (stat << 12);
-                if (islandInfoNew != islandSharedInfo && rc.canWriteSharedArray(islandID + MemorySection.IDX_SKY_ISLAND, islandInfoNew)) {
-                    rc.writeSharedArray(islandID + MemorySection.IDX_SKY_ISLAND, islandInfoNew);
+            final int index = islandID + MemorySection.SKY_ISLAND.getStartIdx();
+            final int currentMemoryAddress = rc.readSharedArray(index);
+            final int occupationStatus = MemoryAddress.fromTeam(rc.senseTeamOccupyingIsland(islandID), rc.getTeam());
+
+            if (MemoryAddress.isInitial(currentMemoryAddress)) {
+                // memory is empty, write the location of the island
+                MapLocation locationToWrite = new MapLocation(Integer.MAX_VALUE, Integer.MAX_VALUE);
+
+                // find the bottom left corner of the island
+                for (MapLocation islandLocation : rc.senseNearbyIslandLocations(islandID)) {
+                    if (islandLocation.compareTo(locationToWrite) < 0) {
+                        locationToWrite = islandLocation;
+                    }
                 }
-                return;
-            }
-            MapLocation location = new MapLocation(Integer.MAX_VALUE, Integer.MAX_VALUE);
-            for (MapLocation islandLocation : rc.senseNearbyIslandLocations(islandID)) {
-                if (islandLocation.x <= location.x && islandLocation.y <= location.y) {
-                    location = islandLocation;
+
+                // TODO: 存入 cache
+                final int newMemoryAddress = occupationStatus | MemoryAddress.fromLocation(locationToWrite);
+                if (rc.canWriteSharedArray(index, newMemoryAddress)) {
+                    rc.writeSharedArray(index, newMemoryAddress);
                 }
-            }
-            int locationInt = MemoryAddress.fromLocation(location) | (stat << 14);
-            if (rc.canWriteSharedArray(islandID + MemorySection.IDX_SKY_ISLAND, locationInt)) {
-                rc.writeSharedArray(islandID + MemorySection.IDX_SKY_ISLAND, locationInt);
+
+            } else {
+                // already recorded the location, update the occupation status
+                int newMemoryAddress = occupationStatus | MemoryAddress.extractCoords(currentMemoryAddress);
+
+                // TODO: 分类讨论直接写入还是存到 cache 里
+                if (newMemoryAddress != currentMemoryAddress && rc.canWriteSharedArray(index, newMemoryAddress)) {
+                    rc.writeSharedArray(index, newMemoryAddress);
+                }
+
             }
 
         }
