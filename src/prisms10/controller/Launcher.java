@@ -4,6 +4,7 @@ import battlecode.common.*;
 import prisms10.memory.*;
 import prisms10.util.Location;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Launcher extends Robot {
@@ -18,14 +19,30 @@ public class Launcher extends Robot {
     public void run() throws GameActionException {
         super.run();
 
-        // try to attack someone
-        RobotInfo[] enemyLocation = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
-        for (RobotInfo enemy : enemyLocation) {
-            if (rc.canAttack(enemy.location)) {
-                rc.attack(enemy.location);
+        // try to attack someone until can't
+        while (true) {
+            RobotInfo[] enemyLocation = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
+            boolean attacked = false;
+            for (RobotInfo enemy : enemyLocation) {
+                if (rc.canAttack(enemy.location)) {
+                    rc.attack(enemy.location);
+                    attacked = true;
+                    break;
+                }
+            }
+            if (!attacked) {
                 break;
             }
         }
+
+        // 40 percent to move to a combat area
+        if (random.nextFloat() < .4 && MemoryCache.sizeBySec(rc, MemorySection.COMBAT) >= 1){
+            ArrayList<Integer> combatLocs = MemoryCache.readBySection(rc, MemorySection.COMBAT);
+            int combatLoc = combatLocs.get(random.nextInt(combatLocs.size()));
+            bindTo = MemoryAddress.toLocation(combatLoc);
+            state = 1; // move to combat area
+        }
+
         MemoryCache.writeBackLocs(rc);
         switch (state) {
             case 0:

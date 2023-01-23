@@ -16,7 +16,7 @@ public class MemoryCache {
         }
     }
 
-    static int firstEmpty(RobotController rc, MemorySection type) throws GameActionException {
+    static public int firstEmpty(RobotController rc, MemorySection type) throws GameActionException {
         // return -1 if not found, otherwise return the index
         return exist(rc, MemoryAddress.MASK_COORDS, type);
     }
@@ -29,6 +29,16 @@ public class MemoryCache {
             }
         }
         return -1;
+    }
+
+    public static int sizeBySec(RobotController rc, MemorySection type) throws GameActionException {
+        int size = 0;
+        for (int i = type.getStartIdx(); i < type.getEndIdx(); i++) {
+            if (rc.readSharedArray(i) != MemoryAddress.MASK_COORDS) {
+                size++;
+            }
+        }
+        return size;
     }
 
     public static void writeBackLocs(RobotController rc) throws GameActionException {
@@ -71,4 +81,9 @@ public class MemoryCache {
         return locs;
     }
 
+    public static void delPosInSec(RobotController rc, int pos, MemorySection sec) throws GameActionException {
+        if (rc.canWriteSharedArray(pos, MemoryAddress.MASK_COORDS)) {
+            rc.writeSharedArray(pos, MemoryAddress.MASK_COORDS);
+        }
+    }
 }

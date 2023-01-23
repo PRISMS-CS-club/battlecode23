@@ -24,6 +24,7 @@ public class Robot {
     int state;                                       // Current state of robot. Its meaning depends on the type of robot
     int stateCounter = 0;                            // Number of rounds the robot has been staying in current state
     final int STATE_COUNTER_MAX = 450;
+    final int MIN_COMBAT_ENEMY = 4;                  // min enemy count to trigger combat mode
     MapInfo[][] mapInfos = new MapInfo[GameConstants.MAP_MAX_WIDTH][GameConstants.MAP_MAX_HEIGHT];    // What the robot knows about the map
     int[][] passable = new int[GameConstants.MAP_MAX_WIDTH][GameConstants.MAP_MAX_HEIGHT];    // What the robot knows about the map (passable)
     // 0 -> cannot pass, 1 can pass, -1 unknown
@@ -45,6 +46,7 @@ public class Robot {
         scanForWells();
         scanForSkyIslands();
         scanForEnemyHQs();
+        scanForCombat();
     }
 
 
@@ -222,5 +224,57 @@ public class Robot {
 
     }
 
+    public void scanForCombat() throws GameActionException {
+        if (getEnemCnt() < MIN_COMBAT_ENEMY){
+            // if not in combat, check if this location is reported to be in combat in sh mem
+            int curLoc = MemoryCache.exist(rc, MemoryAddress.fromLocation(rc.getLocation()), MemorySection.COMBAT);
+            if (curLoc != -1 && rc.canWriteSharedArray(curLoc, MemoryAddress.MASK_COORDS)) {
+                // if this location is reported to be in combat, clear the record
+                rc.writeSharedArray(curLoc, MemoryAddress.MASK_COORDS);
+            }
+            return;
+        }
+
+        if (MemoryCache.exist(rc, MemoryAddress.fromLocation(rc.getLocation()), MemorySection.COMBAT) == 1) {
+            return;
+        }
+        // do not use cache for this, because info in cache is not updated
+        int writePos = MemoryCache.firstEmpty(rc, MemorySection.COMBAT);
+        if (!(writePos != -1 && rc.canWriteSharedArray(writePos, MemoryAddress.fromLocation(rc.getLocation())))) {
+            writePos = MemorySection.COMBAT.getRandIdx();
+        }
+        if (rc.canWriteSharedArray(writePos, MemoryAddress.fromLocation(rc.getLocation()))) {
+            rc.writeSharedArray(writePos, MemoryAddress.fromLocation(rc.getLocation()));
+        }
+    }
+
+    public int getEnemCnt(){
+        // need to have more than 5 enemies nearby
+        RobotInfo[] nearbyRobots = rc.senseNearbyRobots();
+        int numEnemies = 0;
+        for (RobotInfo robot : nearbyRobots) {
+            if (robot.getTeam() != rc.getTeam()) {
+                numEnemies++;
+            }
+        }
+        return numEnemies;
+    }
+
+
+
+    public int getFullHealth(){
+        switch (rc.getType()){
+            case CARRIER:
+                return 150;
+            case LAUNCHER:
+                return 200;
+            case BOOSTER:
+                return 400;
+            case AMPLIFIER:
+                return 120;
+            default:
+                return -1;
+        }
+    }
 
 }
