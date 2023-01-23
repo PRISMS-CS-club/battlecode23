@@ -29,15 +29,15 @@ public class MemoryAddress {
         return new MapLocation((address & MASK_X_COORDINATE) >> 6, address & MASK_Y_COORDINATE);
     }
 
-    public static int fromLocation(MapLocation location, ResourceType type) {
-        return (type.resourceID << 12) + fromLocation(location);
-    }
-
     public static int fromLocation(MapLocation location) {
         return (location.x << 6) + location.y;
     }
 
-    public static int fromTeam(Team occupying, Team self) {
+    public static int fromResourceLocation(ResourceType type, MapLocation location) {
+        return (type.resourceID << 12) + fromLocation(location);
+    }
+
+    public static int fromOccupationStatus(Team occupying, Team self) {
         return (occupying == Team.NEUTRAL) ? 0x0000 : (occupying == self) ? 0x1000 : 0x2000;
     }
 

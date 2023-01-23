@@ -1,5 +1,11 @@
 package prisms10.memory;
 
+import battlecode.common.GameActionException;
+import battlecode.common.RobotController;
+
+import java.util.ArrayList;
+import java.util.function.Predicate;
+
 public enum MemorySection {
 
     WELL {
@@ -53,6 +59,39 @@ public enum MemorySection {
     public static final int IDX_SKY_ISLAND = 12;
     public static final int IDX_ENEMY_HQ = 48;
     public static final int IDX_ENEMY_HQ_END = 52;
+
+    /**
+     * Reads all values in a specific section of the shared memory
+     */
+    public static ArrayList<Integer> read(RobotController rc, MemorySection section) throws GameActionException {
+
+        ArrayList<Integer> addresses = new ArrayList<>();
+
+        for (int i = section.getStartIdx(); i < section.getEndIdx(); i++) {
+            int address = rc.readSharedArray(i);
+            if (address != MemoryAddress.MASK_COORDS) {
+                addresses.add(address);
+            }
+        }
+
+        return addresses;
+
+    }
+
+    public static ArrayList<Integer> read(RobotController rc, MemorySection section, Predicate<Integer> pred) throws GameActionException {
+
+        ArrayList<Integer> addresses = new ArrayList<>();
+
+        for (int i = section.getStartIdx(); i < section.getEndIdx(); i++) {
+            int address = rc.readSharedArray(i);
+            if (address != MemoryAddress.MASK_COORDS && pred.test(address)) {
+                addresses.add(address);
+            }
+        }
+
+        return addresses;
+
+    }
 
     public abstract int getStartIdx();
 

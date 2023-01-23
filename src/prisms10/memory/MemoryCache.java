@@ -58,33 +58,4 @@ public class MemoryCache {
         }
     }
 
-    /**
-     * read all values in a specific section of shared memory
-     */
-    public static ArrayList<Integer> readBySection(RobotController rc, MemorySection sec) throws GameActionException {
-        ArrayList<Integer> locs = new ArrayList<>();
-        for (int i = sec.getStartIdx(); i < sec.getEndIdx(); i++) {
-            int loc = rc.readSharedArray(i);
-            if (loc != MemoryAddress.MASK_COORDS) {
-                locs.add(loc);
-            }
-        }
-        return locs;
-    }
-
-    /**
-     * read all valid values in a specific section of shared memory
-     * the predicate filters out places that are not needed
-     */
-    public static ArrayList<Integer> readBySection(RobotController rc, MemorySection sec, Predicate<Integer> pred) throws GameActionException {
-        ArrayList<Integer> locs = new ArrayList<>();
-        for (int i = sec.getStartIdx(); i < sec.getEndIdx(); i++) {
-            int loc = rc.readSharedArray(i);
-            if (loc != MemoryAddress.MASK_COORDS && pred.test(loc)) {
-                locs.add(loc);
-            }
-        }
-        return locs;
-    }
-
 }

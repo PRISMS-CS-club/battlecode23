@@ -30,9 +30,9 @@ public class Headquarters extends Robot {
                 rc.writeSharedArray(i, MemoryAddress.MASK_COORDS);
             }
             // initialize nearby well info
-            scanForWells();
+            super.run();
         }
-        // record the current headquarter's position into shared memory
+        // record the current headquarters' position into shared memory
         int currentLocation = MemoryAddress.fromLocation(rc.getLocation());
         for (int i = 8; i < 11; i++) {
             int data = rc.readSharedArray(i);
