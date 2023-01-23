@@ -4,7 +4,6 @@ import battlecode.common.*;
 import prisms10.memory.MemoryAddress;
 import prisms10.memory.MemorySection;
 import prisms10.util.Location;
-import prisms10.util.Randomness;
 
 public class Headquarters extends Robot {
 

@@ -1,10 +1,7 @@
 package prisms10.controller;
 
 import battlecode.common.*;
-import prisms10.memory.MemoryAddress;
-import prisms10.memory.MemorySection;
-import prisms10.memory.SharedMemory;
-import prisms10.util.Randomness;
+import prisms10.memory.*;
 import prisms10.util.Location;
 
 import java.util.List;
