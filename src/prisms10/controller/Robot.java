@@ -25,7 +25,7 @@ public class Robot {
     int state;                                       // Current state of robot. Its meaning depends on the type of robot
     int stateCounter = 0;                            // Number of rounds the robot has been staying in current state
     final int STATE_COUNTER_MAX = 450;
-    final int MIN_COMBAT_ENEMY = 4;                  // min enemy count to trigger combat mode
+    final int MIN_COMBAT_ENEMY = 3;                  // min enemy count to trigger combat mode
     MapInfo[][] mapInfos = new MapInfo[GameConstants.MAP_MAX_WIDTH][GameConstants.MAP_MAX_HEIGHT];    // What the robot knows about the map
     int[][] passable = new int[GameConstants.MAP_MAX_WIDTH][GameConstants.MAP_MAX_HEIGHT];    // What the robot knows about the map (passable)
     // 0 -> cannot pass, 1 can pass, -1 unknown
