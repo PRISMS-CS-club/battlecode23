@@ -35,6 +35,10 @@ public class Robot {
     }
 
 
+    /**
+     * Run a single turn for a robot.
+     * This code is wrapped inside the infinite loop in run(), so it is called once per turn.
+     */
     public void run() throws GameActionException {
         // scan nearby environment and record information to shared memory
         // TODO: reduce redundant scans to save bytecode
@@ -89,9 +93,9 @@ public class Robot {
     }
 
     void randomMove() throws GameActionException {
-        ArrayList<Integer> myHeadquarters = SharedMemory.readBySection(rc, MemorySection.HQ);
-        ArrayList<Integer> enemyHeadquarters = SharedMemory.readBySection(rc, MemorySection.ENEMY_HQ);
-        ArrayList<Integer> wells = SharedMemory.readBySection(rc, MemorySection.WELL);
+        ArrayList<Integer> myHeadquarters = MemoryCache.readBySection(rc, MemorySection.HQ);
+        ArrayList<Integer> enemyHeadquarters = MemoryCache.readBySection(rc, MemorySection.ENEMY_HQ);
+        ArrayList<Integer> wells = MemoryCache.readBySection(rc, MemorySection.WELL);
         MapLocation curLoc = rc.getLocation();
         // calculate each point's grid weight
         int[] nearbyGrid = new int[Direction.values().length];
@@ -143,7 +147,7 @@ public class Robot {
                 }
             }
             if (toWrite) {
-                Set<Integer> wellLocs = SharedMemory.locsToWrite.get(MemorySection.WELL);
+                Set<Integer> wellLocs = MemoryCache.locsToWrite.get(MemorySection.WELL);
                 assert wellLocs != null : "locationsToWrite should be initialized in static block";
                 wellLocs.add(s);
             }
@@ -169,8 +173,8 @@ public class Robot {
                 // make sure this is an enemy headquarters
                 int s = MemoryAddress.fromLocation(robot.getLocation());
                 boolean toWrite = true;
-                if (SharedMemory.exist(rc, s, MemorySection.ENEMY_HQ) == -1) {
-                    Set<Integer> enemyHQlocs = SharedMemory.locsToWrite.get(MemorySection.ENEMY_HQ);
+                if (MemoryCache.exist(rc, s, MemorySection.ENEMY_HQ) == -1) {
+                    Set<Integer> enemyHQlocs = MemoryCache.locsToWrite.get(MemorySection.ENEMY_HQ);
                     assert enemyHQlocs != null : "locationsToWrite should be initialized in static block";
                     enemyHQlocs.add(s);
                 }

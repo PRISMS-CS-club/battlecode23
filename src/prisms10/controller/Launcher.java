@@ -13,10 +13,7 @@ public class Launcher extends Robot {
         robotType = RobotType.LAUNCHER;
     }
 
-    /**
-     * Run a single turn for a Launcher.
-     * This code is wrapped inside the infinite loop in run(), so it is called once per turn.
-     */
+
     @Override
     public void run() throws GameActionException {
         super.run();
@@ -29,14 +26,14 @@ public class Launcher extends Robot {
                 break;
             }
         }
-        SharedMemory.writeBackLocs(rc);
+        MemoryCache.writeBackLocs(rc);
         switch (state) {
             case 0:
                 rc.setIndicatorString("initial state");
                 float randNum = random.nextFloat();
                 boolean occupied = false; // see if the launcher have something to do
                 if (randNum < 0.2) {
-                    List<Integer> headquarters = SharedMemory.readBySection(rc, MemorySection.HQ);
+                    List<Integer> headquarters = MemoryCache.readBySection(rc, MemorySection.HQ);
                     if (headquarters.size() > 0) {
                         bindTo =
                                 MemoryAddress.toLocation(headquarters.get(Math.abs(random.nextInt()) % headquarters.size()));
@@ -44,7 +41,7 @@ public class Launcher extends Robot {
                         occupied = true;
                     }
                 } else if (randNum < 0.55) {
-                    List<Integer> headquarters = SharedMemory.readBySection(rc, MemorySection.ENEMY_HQ);
+                    List<Integer> headquarters = MemoryCache.readBySection(rc, MemorySection.ENEMY_HQ);
                     if (headquarters.size() > 0) {
                         bindTo =
                                 MemoryAddress.toLocation(headquarters.get(Math.abs(random.nextInt()) % headquarters.size()));
@@ -52,7 +49,7 @@ public class Launcher extends Robot {
                         occupied = true;
                     }
                 } else if (randNum < 0.9) {
-                    List<Integer> skyIsland = SharedMemory.readBySection(rc, MemorySection.SKY_ISLAND);
+                    List<Integer> skyIsland = MemoryCache.readBySection(rc, MemorySection.SKY_ISLAND);
                     if (skyIsland.size() > 0) {
                         bindTo = MemoryAddress.toLocation(skyIsland.get(Math.abs(random.nextInt()) % skyIsland.size()));
                         state = 1;

@@ -59,16 +59,6 @@ public class Randomness {
         return objects[index];
     }
 
-    public <T> T randomSelect(T[] objects, int[] probability, int st, int ed) {
-        T[] tmpObjs = (T[]) new Object[ed - st];
-        int[] tmpProbs = new int[ed - st];
-        for (int i = st; i < ed; i++) {
-            tmpObjs[i - st] = objects[i];
-            tmpProbs[i - st] = probability[i];
-        }
-        return randomSelect(tmpObjs, tmpProbs);
-    }
-
     /**
      * Finds the index of the first element in array that is greater than the given number.
      * The array should be sorted in ascending order.
@@ -91,7 +81,7 @@ public class Randomness {
 
     public MapLocation randSelectEnemyHQ(RobotController rc) throws GameActionException {
         ArrayList<MapLocation> enemyHQs = new ArrayList<>();
-        for (int encoded : SharedMemory.readBySection(rc, MemorySection.ENEMY_HQ)) {
+        for (int encoded : MemoryCache.readBySection(rc, MemorySection.ENEMY_HQ)) {
             enemyHQs.add(MemoryAddress.toLocation(encoded));
         }
         if (enemyHQs.size() == 0) {

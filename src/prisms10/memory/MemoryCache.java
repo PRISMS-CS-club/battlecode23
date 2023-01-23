@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 import java.util.*;
 
-public class SharedMemory {
+public class MemoryCache {
 
 
     //    static Set<Integer> locationsToWrite = new HashSet<>(); // Every important location that is scheduled to record into shared memory

@@ -16,10 +16,7 @@ public class Carrier extends Robot {
         robotType = RobotType.CARRIER;
     }
 
-    /**
-     * Run a single turn for a Carrier.
-     * This code is wrapped inside the infinite loop in run(), so it is called once per turn.
-     */
+
     @Override
     public void run() throws GameActionException {
 
@@ -166,7 +163,7 @@ public class Carrier extends Robot {
                 break;
         }
         // clear up repeated information in locationsToWrite array
-        SharedMemory.writeBackLocs(rc);
+        MemoryCache.writeBackLocs(rc);
 
     }
 

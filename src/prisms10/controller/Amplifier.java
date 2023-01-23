@@ -1,7 +1,7 @@
 package prisms10.controller;
 
 import battlecode.common.*;
-import prisms10.memory.SharedMemory;
+import prisms10.memory.MemoryCache;
 
 public class Amplifier extends Robot {
 
@@ -10,11 +10,12 @@ public class Amplifier extends Robot {
         robotType = RobotType.AMPLIFIER;
     }
 
+
     @Override
     public void run() throws GameActionException {
         super.run();
         randomMove();
-        SharedMemory.writeBackLocs(rc);
+        MemoryCache.writeBackLocs(rc);
     }
 
 }

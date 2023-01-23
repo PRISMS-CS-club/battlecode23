@@ -7,22 +7,19 @@ import prisms10.util.Location;
 
 public class Headquarters extends Robot {
 
-    public Headquarters(RobotController rc) {
-        super(rc);
-        robotType = RobotType.HEADQUARTERS;
-    }
-
     // the first few robots the headquarters will build
-    static final RobotType[] initialRobots = new RobotType[]{
+    static final RobotType[] initialRobots = {
             RobotType.AMPLIFIER, RobotType.CARRIER, RobotType.LAUNCHER, RobotType.LAUNCHER
     };
     // number of rounds producing items randomly before producing an anchor is required
     static final int nextAnchorRound = 30;
 
-    /**
-     * Run a single turn for a Headquarters.
-     * This code is wrapped inside the infinite loop in run(), so it is called once per turn.
-     */
+    public Headquarters(RobotController rc) {
+        super(rc);
+        robotType = RobotType.HEADQUARTERS;
+    }
+
+
     @Override
     public void run() throws GameActionException {
         // initialize
