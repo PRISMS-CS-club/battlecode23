@@ -33,7 +33,7 @@ public class Launcher extends Robot {
                 float randNum = random.nextFloat();
                 boolean occupied = false; // see if the launcher have something to do
                 if (randNum < 0.2) {
-                    List<Integer> headquarters = MemorySection.read(rc, MemorySection.HQ);
+                    List<Integer> headquarters = MemorySection.HQ.readSection(rc);
                     if (headquarters.size() > 0) {
                         bindTo =
                                 MemoryAddress.toLocation(headquarters.get(Math.abs(random.nextInt()) % headquarters.size()));
@@ -41,7 +41,7 @@ public class Launcher extends Robot {
                         occupied = true;
                     }
                 } else if (randNum < 0.55) {
-                    List<Integer> headquarters = MemorySection.read(rc, MemorySection.ENEMY_HQ);
+                    List<Integer> headquarters = MemorySection.ENEMY_HQ.readSection(rc);
                     if (headquarters.size() > 0) {
                         bindTo =
                                 MemoryAddress.toLocation(headquarters.get(Math.abs(random.nextInt()) % headquarters.size()));
@@ -49,7 +49,7 @@ public class Launcher extends Robot {
                         occupied = true;
                     }
                 } else if (randNum < 0.9) {
-                    List<Integer> skyIsland = MemorySection.read(rc, MemorySection.SKY_ISLAND);
+                    List<Integer> skyIsland = MemorySection.SKY_ISLAND.readSection(rc);
                     if (skyIsland.size() > 0) {
                         bindTo = MemoryAddress.toLocation(skyIsland.get(Math.abs(random.nextInt()) % skyIsland.size()));
                         state = 1;

@@ -81,7 +81,7 @@ public class Randomness {
 
     public MapLocation randSelectEnemyHeadquarters(RobotController rc) throws GameActionException {
         ArrayList<MapLocation> enemyHeadquarters = new ArrayList<>();
-        for (int encoded : MemorySection.read(rc, MemorySection.ENEMY_HQ)) {
+        for (int encoded : MemorySection.ENEMY_HQ.readSection(rc)) {
             enemyHeadquarters.add(MemoryAddress.toLocation(encoded));
         }
         if (enemyHeadquarters.size() == 0) {

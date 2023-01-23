@@ -59,14 +59,15 @@ public enum MemorySection {
     public static final int IDX_ENEMY_HQ = 48;
     public static final int IDX_ENEMY_HQ_END = 52;
 
+
     /**
-     * Reads all values in a specific section of the shared memory
+     * Reads all addresses in a specific section of the shared memory.
      */
-    public static ArrayList<Integer> read(RobotController rc, MemorySection section) throws GameActionException {
+    public ArrayList<Integer> readSection(RobotController rc) throws GameActionException {
 
         ArrayList<Integer> addresses = new ArrayList<>();
 
-        for (int i = section.getStartIdx(); i < section.getEndIdx(); i++) {
+        for (int i = this.getStartIdx(); i < this.getEndIdx(); i++) {
             int address = rc.readSharedArray(i);
             if (address != MemoryAddress.MASK_COORDS) {
                 addresses.add(address);
@@ -74,8 +75,24 @@ public enum MemorySection {
         }
 
         return addresses;
-
     }
+
+    /**
+     * Checks if an address exists in a specific section of the shared memory.
+     *
+     * @return -1 if not found, otherwise return the index of the address
+     */
+    public int contains(RobotController rc, int address) throws GameActionException {
+
+        for (int i = this.getStartIdx(); i < this.getEndIdx(); i++) {
+            if (rc.readSharedArray(i) == address) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
 
     public abstract int getStartIdx();
 

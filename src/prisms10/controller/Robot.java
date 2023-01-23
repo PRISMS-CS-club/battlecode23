@@ -94,9 +94,9 @@ public class Robot {
 
     void randomMove() throws GameActionException {
 
-        ArrayList<Integer> myHeadquarters = MemorySection.read(rc, MemorySection.HQ);
-        ArrayList<Integer> enemyHeadquarters = MemorySection.read(rc, MemorySection.ENEMY_HQ);
-        ArrayList<Integer> wells = MemorySection.read(rc, MemorySection.WELL);
+        ArrayList<Integer> myHeadquarters = MemorySection.HQ.readSection(rc);
+        ArrayList<Integer> enemyHeadquarters = MemorySection.ENEMY_HQ.readSection(rc);
+        ArrayList<Integer> wells = MemorySection.WELL.readSection(rc);
         MapLocation curLoc = rc.getLocation();
         // calculate each point's grid weight
         int[] nearbyGrid = new int[Direction.values().length];
@@ -166,7 +166,7 @@ public class Robot {
         // first check if all enemy headquarters are found
         boolean allFound = true;
         for (int i = MemorySection.ENEMY_HQ.getStartIdx(); i < MemorySection.ENEMY_HQ.getEndIdx(); i++) {
-            if (rc.readSharedArray(i) == MemoryAddress.MASK_COORDS) {
+            if (MemoryAddress.isInitial(rc.readSharedArray(i))) {
                 allFound = false;
                 break;
             }
@@ -178,7 +178,7 @@ public class Robot {
                 // make sure this is an enemy headquarters
                 int address = MemoryAddress.fromLocation(robot.getLocation());
 
-                if (MemoryCache.exist(rc, address, MemorySection.ENEMY_HQ) == -1) {
+                if (MemorySection.ENEMY_HQ.contains(rc, address) == -1) {
                     Set<Integer> enemyHeadquarters = MemoryCache.locsToWrite.get(MemorySection.ENEMY_HQ);
                     assert enemyHeadquarters != null : "locationsToWrite should be initialized in static block";
                     enemyHeadquarters.add(address);
