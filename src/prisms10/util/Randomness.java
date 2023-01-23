@@ -1,36 +1,42 @@
 package prisms10.util;
 
+import battlecode.common.GameActionException;
 import battlecode.common.RobotController;
+import battlecode.common.MapLocation;
+import prisms10.memory.*;
+
+import java.util.ArrayList;
 
 /**
  * A class that provides a random number generator and random selection related methods.
  */
 public class Randomness {
 
+    private final java.util.Random rng;
+
     /**
-     * A random number generator. We will use this RNG to make some random moves. The Random class is provided by the
-     * java.util.Random import at the top of this file. Here, we *seed* the RNG with a constant number (114514); this
-     * makes sure we get the same sequence of numbers every time this code is run. This is very useful for debugging!
+     * A random number generator.
+     * We will use this RNG to make some random moves. The RNG is provided by the java.util.Random class.
+     * Here, we *seed* the RNG with each robot's unique ID; this makes sure our robots behave differently and
+     * that we get the same sequence of numbers every time this code is run. This is very useful for debugging!
      */
-    private static final java.util.Random rng = new java.util.Random(114514);
+    public Randomness(long seed) {
+        rng = new java.util.Random(seed);
+    }
 
-    public static int nextInt() {
-
+    public int nextInt() {
         return rng.nextInt();
     }
 
-    public static int nextInt(int bound) {
-
+    public int nextInt(int bound) {
         return rng.nextInt(bound);
     }
 
-    public static float nextFloat() {
-
+    public float nextFloat() {
         return rng.nextFloat();
     }
 
-    public static boolean nextBoolean() {
-
+    public boolean nextBoolean() {
         return rng.nextBoolean();
     }
 
@@ -43,7 +49,7 @@ public class Randomness {
      *                    positive.
      * @return the random object selected
      */
-    public static <T> T randomSelect(T[] objects, int[] probability) {
+    public <T> T randomSelect(T[] objects, int[] probability) {
         int[] prefixSum = probability.clone();
         for (int i = 1; i < prefixSum.length; i++) {
             prefixSum[i] += prefixSum[i - 1];
@@ -53,7 +59,7 @@ public class Randomness {
         return objects[index];
     }
 
-    public static <T> T randomSelect(T[] objects, int[] probability, int st, int ed) {
+    public <T> T randomSelect(T[] objects, int[] probability, int st, int ed) {
         T[] tmpObjs = (T[]) new Object[ed - st];
         int[] tmpProbs = new int[ed - st];
         for (int i = st; i < ed; i++) {
@@ -67,7 +73,7 @@ public class Randomness {
      * Finds the index of the first element in array that is greater than the given number.
      * The array should be sorted in ascending order.
      */
-    public static int upperBound(int[] array, int number, int left, int right) {
+    public int upperBound(int[] array, int number, int left, int right) {
         if (right - left == 1) {
             return right;
         }
@@ -79,7 +85,19 @@ public class Randomness {
         }
     }
 
-    public static void setSeed(long seed){
-        rng.setSeed(seed);
+    public MapLocation getRandLoc(RobotController rc) {
+        return new MapLocation(nextInt(rc.getMapWidth()), nextInt(rc.getMapHeight()));
     }
+
+    public MapLocation randSelectEnemyHQ(RobotController rc) throws GameActionException {
+        ArrayList<MapLocation> enemyHQs = new ArrayList<>();
+        for (int encoded : SharedMemory.readBySection(rc, MemorySection.ENEMY_HQ)) {
+            enemyHQs.add(MemoryAddress.toLocation(encoded));
+        }
+        if (enemyHQs.size() == 0) {
+            return null;
+        }
+        return enemyHQs.get(Math.abs(nextInt()) % enemyHQs.size());
+    }
+
 }

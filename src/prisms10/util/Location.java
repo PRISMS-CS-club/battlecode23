@@ -1,14 +1,7 @@
 package prisms10.util;
 
 import battlecode.common.Direction;
-import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
-import prisms10.memory.MemoryAddress;
-import prisms10.memory.MemorySection;
-import prisms10.memory.SharedMemory;
-
-import java.util.ArrayList;
 
 public class Location {
 
@@ -97,22 +90,6 @@ public class Location {
             }
         }
         return ret;
-    }
-
-    public static MapLocation getRandLoc(RobotController rc) {
-        return new MapLocation(Randomness.nextInt(rc.getMapWidth()), Randomness.nextInt(rc.getMapHeight()));
-    }
-
-
-    public static MapLocation randSelectEnemyHQ(RobotController rc) throws GameActionException {
-        ArrayList<MapLocation> enemyHQs = new ArrayList<>();
-        for (int encoded : SharedMemory.readBySection(rc, MemorySection.ENEMY_HQ)) {
-            enemyHQs.add(MemoryAddress.toLocation(encoded));
-        }
-        if (enemyHQs.size() == 0) {
-            return null;
-        }
-        return enemyHQs.get(Math.abs(Randomness.nextInt()) % enemyHQs.size());
     }
 
 

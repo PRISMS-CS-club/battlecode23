@@ -56,7 +56,7 @@ public class Headquarters extends Robot {
             // randomly select the first robot
             do {
                 RobotType curType = initialRobots[state];
-                MapLocation curLoc = rimLocs[Math.abs(Randomness.nextInt()) % 16];
+                MapLocation curLoc = rimLocs[Math.abs(random.nextInt()) % 16];
                 if (rc.canBuildRobot(curType, curLoc)) {
                     rc.buildRobot(curType, curLoc);
                     state++;
@@ -76,9 +76,9 @@ public class Headquarters extends Robot {
                 } else break;
             } else {
                 // Pick a direction to build in.
-                Direction dir = Direction.values()[Randomness.nextInt(Direction.values().length)];
+                Direction dir = Direction.values()[random.nextInt(Direction.values().length)];
                 MapLocation newLoc = rc.getLocation().add(dir);
-                float randNum = Randomness.nextFloat();
+                float randNum = random.nextFloat();
                 if (randNum < 0.42) {
                     // probability for carrier: 42%
                     rc.setIndicatorString("Trying to build a carrier");

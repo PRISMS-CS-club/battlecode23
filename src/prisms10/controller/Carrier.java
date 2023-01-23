@@ -74,13 +74,13 @@ public class Carrier extends Robot {
                     }
                     if (locations.size() != 0) {
                         // if the robot can find a well, target toward the well
-                        bindTo = locations.get(Math.abs(Randomness.nextInt()) % locations.size());
+                        bindTo = locations.get(Math.abs(random.nextInt()) % locations.size());
                         changeState(1);
                         break;
                     }
                 }
                 // if the bot does not find any job, wander randomly
-                Direction dir = Direction.values()[(Randomness.nextInt() % 8 + 8) % 8];
+                Direction dir = Direction.values()[(random.nextInt() % 8 + 8) % 8];
                 if (rc.canMove(dir)) {
                     rc.move(dir);
                 }

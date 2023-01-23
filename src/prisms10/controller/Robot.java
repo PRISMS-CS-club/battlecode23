@@ -11,11 +11,12 @@ public class Robot {
 
     RobotController rc;
     RobotType robotType;
+    Randomness random;
 
     Robot(RobotController rc) {
-        Randomness.setSeed(rc.getID());
         this.rc = rc;
-        this.gridWeight = new float[rc.getMapWidth()][rc.getMapHeight()];
+        random = new Randomness(rc.getID());
+        gridWeight = new float[rc.getMapWidth()][rc.getMapHeight()];
     }
 
 
@@ -55,7 +56,8 @@ public class Robot {
         // rc.setIndicatorString("moving toward " + destination);
         // TODO: avoid obstacles
         MapLocation myLocation = rc.getLocation();
-        boolean rotateDir = Randomness.nextBoolean();  // when one cannot move toward one direction, whether to rotate left or right
+        boolean rotateDir = random.nextBoolean();  // when one cannot move toward one direction, whether to rotate left or
+        // right
         while (rc.isMovementReady() && (myLocation.x != destination.x || myLocation.y != destination.y)) {
             Direction direction = Location.toDirection(destination.x - myLocation.x, destination.y - myLocation.y);
             if (!toward) {
@@ -112,7 +114,7 @@ public class Robot {
 
         }
 
-        Direction randSel = Randomness.randomSelect(Direction.values(), nearbyGrid);
+        Direction randSel = random.randomSelect(Direction.values(), nearbyGrid);
         if (!rc.canMove(randSel)) {
             for (Direction cur : Direction.values()) {
                 if (rc.canMove(cur)) {

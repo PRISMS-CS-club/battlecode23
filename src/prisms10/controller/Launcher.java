@@ -36,33 +36,35 @@ public class Launcher extends Robot {
         switch (state) {
             case 0:
                 rc.setIndicatorString("initial state");
-                float randNum = Randomness.nextFloat();
+                float randNum = random.nextFloat();
                 boolean occupied = false; // see if the launcher have something to do
                 if (randNum < 0.2) {
                     List<Integer> headquarters = SharedMemory.readBySection(rc, MemorySection.HQ);
                     if (headquarters.size() > 0) {
-                        bindTo = MemoryAddress.toLocation(headquarters.get(Math.abs(Randomness.nextInt()) % headquarters.size()));
+                        bindTo =
+                                MemoryAddress.toLocation(headquarters.get(Math.abs(random.nextInt()) % headquarters.size()));
                         state = 1;
                         occupied = true;
                     }
                 } else if (randNum < 0.55) {
                     List<Integer> headquarters = SharedMemory.readBySection(rc, MemorySection.ENEMY_HQ);
                     if (headquarters.size() > 0) {
-                        bindTo = MemoryAddress.toLocation(headquarters.get(Math.abs(Randomness.nextInt()) % headquarters.size()));
+                        bindTo =
+                                MemoryAddress.toLocation(headquarters.get(Math.abs(random.nextInt()) % headquarters.size()));
                         state = 1;
                         occupied = true;
                     }
                 } else if (randNum < 0.9) {
                     List<Integer> skyIsland = SharedMemory.readBySection(rc, MemorySection.SKY_ISLAND);
                     if (skyIsland.size() > 0) {
-                        bindTo = MemoryAddress.toLocation(skyIsland.get(Math.abs(Randomness.nextInt()) % skyIsland.size()));
+                        bindTo = MemoryAddress.toLocation(skyIsland.get(Math.abs(random.nextInt()) % skyIsland.size()));
                         state = 1;
                         occupied = true;
                     }
                 } else {
                     state = 5;
                 }
-                if (!occupied){
+                if (!occupied) {
                     state = 5;
                 }
             case 4:
@@ -71,8 +73,8 @@ public class Launcher extends Robot {
                 randomMove();
                 break;
             case 5:
-                if(bindTo == null) {
-                    bindTo = Location.getRandLoc(rc);
+                if (bindTo == null) {
+                    bindTo = random.getRandLoc(rc);
                 }
                 rc.setIndicatorString("moving to randomly assigned location " + bindTo);
                 moveToward(bindTo);
@@ -105,7 +107,7 @@ public class Launcher extends Robot {
                     moveToward(bindTo, false, true);
                 }
                 // otherwise, random move
-                Direction dir2 = Direction.values()[Randomness.nextInt(Direction.values().length)];
+                Direction dir2 = Direction.values()[random.nextInt(Direction.values().length)];
                 if (rc.canMove(dir2)) {
                     rc.move(dir2);
 
