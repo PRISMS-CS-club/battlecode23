@@ -63,7 +63,7 @@ public class Robot {
         boolean rotateDir = random.nextBoolean();  // when one cannot move toward one direction, whether to rotate left or
         // right
         while (rc.isMovementReady() && (myLocation.x != destination.x || myLocation.y != destination.y)) {
-            Direction direction = Location.toDirection(destination.x - myLocation.x, destination.y - myLocation.y);
+            Direction direction = Map.directionTo(myLocation, destination);
             if (!toward) {
                 direction = direction.opposite();
             }
@@ -105,15 +105,15 @@ public class Robot {
             nearbyGrid[i] = GridWeight.INITIAL;
             for (Integer myHQ : myHeadquarters) {
                 MapLocation myHQLoc = MemoryAddress.toLocation(myHQ);
-                nearbyGrid[i] -= Math.max(0, GridWeight.HQ - Location.sqEuclidDistance(afterMove, myHQLoc) * GridWeight.HQ_DECAY);
+                nearbyGrid[i] -= Math.max(0, GridWeight.HQ - Map.sqEuclideanDist(afterMove, myHQLoc) * GridWeight.HQ_DECAY);
             }
             for (Integer enemyHQ : enemyHeadquarters) {
                 MapLocation enemyHQLoc = MemoryAddress.toLocation(enemyHQ);
-                nearbyGrid[i] += Math.max(0, GridWeight.HQ - Location.sqEuclidDistance(afterMove, enemyHQLoc) * GridWeight.HQ_DECAY);
+                nearbyGrid[i] += Math.max(0, GridWeight.HQ - Map.sqEuclideanDist(afterMove, enemyHQLoc) * GridWeight.HQ_DECAY);
             }
             for (Integer well : wells) {
                 MapLocation wellLoc = MemoryAddress.toLocation(well);
-                nearbyGrid[i] += Math.max(0, GridWeight.WELL - Location.sqEuclidDistance(afterMove, wellLoc) * GridWeight.WELL_DECAY);
+                nearbyGrid[i] += Math.max(0, GridWeight.WELL - Map.sqEuclideanDist(afterMove, wellLoc) * GridWeight.WELL_DECAY);
             }
 
         }

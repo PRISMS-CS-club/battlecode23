@@ -2,7 +2,7 @@ package prisms10.controller;
 
 import battlecode.common.*;
 import prisms10.memory.*;
-import prisms10.util.Location;
+import prisms10.util.Map;
 
 import java.util.List;
 
@@ -72,7 +72,7 @@ public class Launcher extends Robot {
                 }
                 rc.setIndicatorString("moving to randomly assigned location " + bindTo);
                 moveToward(bindTo);
-                if (Location.diagonalDist(rc.getLocation(), bindTo) < 3) {
+                if (Map.diagonalDist(rc.getLocation(), bindTo) < 3) {
                     //// bindTo = null;
                     state = 3;
                 }
@@ -97,7 +97,7 @@ public class Launcher extends Robot {
                     moveToward(bindTo);
                 }
                 // if moving too close to the target, move away from it
-                if (Location.diagonalDist(bindTo, rc.getLocation()) <= 1) {
+                if (Map.diagonalDist(bindTo, rc.getLocation()) <= 1) {
                     moveToward(bindTo, false, true);
                 }
                 // otherwise, random move
@@ -113,7 +113,7 @@ public class Launcher extends Robot {
                 MapLocation location = rc.getLocation();
                 rc.setIndicatorString("Staying at position " + location);
                 // because headquarter's action radius is 9, the launcher have to stay 9 distance away from headquarter
-                if (Location.sqEuclidDistance(bindTo, moveToward(bindTo, true, false)) > 9) {
+                if (Map.sqEuclideanDist(bindTo, moveToward(bindTo, true, false)) > 9) {
                     moveToward(bindTo);
                 } else {
                     Direction windDirection = rc.senseMapInfo(location).getCurrentDirection();

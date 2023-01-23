@@ -38,7 +38,7 @@ public class MemoryAddress {
     }
 
     public static int fromTeam(Team occupying, Team self) {
-        return occupying == Team.NEUTRAL ? 0x0000 : occupying == self ? 0x1000 : 0x2000;
+        return (occupying == Team.NEUTRAL) ? 0x0000 : (occupying == self) ? 0x1000 : 0x2000;
     }
 
     public static int extractCoords(int address) {

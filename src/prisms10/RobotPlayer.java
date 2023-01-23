@@ -1,8 +1,8 @@
 package prisms10;
 
 import battlecode.common.Clock;
-import battlecode.common.GameActionException;
 import battlecode.common.RobotController;
+import battlecode.common.GameActionException;
 import prisms10.controller.*;
 
 /**

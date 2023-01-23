@@ -90,4 +90,5 @@ public class Randomness {
         return enemyHQs.get(Math.abs(nextInt()) % enemyHQs.size());
     }
 
+
 }
