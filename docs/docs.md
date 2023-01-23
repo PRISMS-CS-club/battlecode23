@@ -29,7 +29,7 @@ Special:
 - integer 8-11: position of every headquarters
 - integer 12-47: position of every sky island
 - integer 48-51: position of every enemy headquarters
-- integer 52-53: positions of intense combat
+- integer 52-54: positions of intense combat
 - integer 63: memory status indicator
     - format: `I___ ____ ____ ____`
     - `I`: Whether memory is initialized, either 0 or 1.

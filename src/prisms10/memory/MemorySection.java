@@ -72,7 +72,7 @@ public enum MemorySection {
     public static final int IDX_SKY_ISLAND = 12;
     public static final int IDX_ENEMY_HQ = 48;
     public static final int IDX_COMBAT = 52;
-    public static final int IDX_COMBAT_END = 54;
+    public static final int IDX_COMBAT_END = 55;
 
 
     /**

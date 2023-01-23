@@ -19,11 +19,15 @@ public class Launcher extends Robot {
 
     public void tryMoveToCombatArea() throws GameActionException {
         if (!followCombatArea) return;
-        if (MemoryCache.sizeBySec(rc, MemorySection.COMBAT) >= 1){
+        if (MemoryCache.sizeBySec(rc, MemorySection.COMBAT) >= 1) {
             ArrayList<Integer> combatLocs = MemoryCache.readBySection(rc, MemorySection.COMBAT);
             int combatLoc = combatLocs.get(random.nextInt(combatLocs.size()));
             bindTo = MemoryAddress.toLocation(combatLoc);
+            assert !bindTo.equals(new MapLocation(0, 0)) : "bug locs size = " + combatLocs.size();
             state = 1;
+        } else {
+            // no combat area, just go to rand pos
+            state = 5;
         }
     }
 
@@ -52,7 +56,7 @@ public class Launcher extends Robot {
             case 0:
                 rc.setIndicatorString("initial state");
                 // 40 percent to move to a combat area
-                if (random.nextFloat() < .4){
+                if (random.nextFloat() < 0.4) {
                     followCombatArea = true;
                 }
 
@@ -96,9 +100,7 @@ public class Launcher extends Robot {
                 randomMove();
                 break;
             case 5:
-                if (bindTo == null) {
-                    bindTo = random.getRandLoc(rc);
-                }
+                bindTo = random.getRandLoc(rc);
                 rc.setIndicatorString("moving to randomly assigned location " + bindTo);
                 moveToward(bindTo);
                 tryMoveToCombatArea();

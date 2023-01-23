@@ -26,7 +26,7 @@ public class Headquarters extends Robot {
         if ((rc.readSharedArray(63) & 0x8000) == 0) {
             rc.writeSharedArray(63, 0x8000);
             // initialize shared memory
-            for (int i = 0; i < MemorySection.IDX_COMBAT; i++) {
+            for (int i = 0; i < MemorySection.IDX_COMBAT_END; i++) {
                 rc.writeSharedArray(i, MemoryAddress.MASK_COORDS);
             }
             // initialize nearby well info
