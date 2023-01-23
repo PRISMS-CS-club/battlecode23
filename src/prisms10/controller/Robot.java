@@ -30,6 +30,7 @@ public class Robot {
     int[][] passable = new int[GameConstants.MAP_MAX_WIDTH][GameConstants.MAP_MAX_HEIGHT];    // What the robot knows about the map (passable)
     // 0 -> cannot pass, 1 can pass, -1 unknown
     float[][] gridWeight = null;                     // assign a weight to each grid
+    RobotInfo[] nearbyRobots;
 
     void changeState(int newState) {
         state = newState;
@@ -44,6 +45,8 @@ public class Robot {
     public void run() throws GameActionException {
         // scan nearby environment and record information to shared memory
         // TODO: reduce redundant scans to save bytecode
+        nearbyRobots = rc.senseNearbyRobots();
+
         scanForWells();
         scanForSkyIslands();
 
@@ -177,7 +180,7 @@ public class Robot {
         }
         if (allFound) return;
 
-        for (RobotInfo robot : rc.senseNearbyRobots()) {
+        for (RobotInfo robot : nearbyRobots) {
             if (robot.getType() == RobotType.HEADQUARTERS && robot.getTeam() != rc.getTeam()) {
                 // make sure this is an enemy headquarters
                 int address = MemoryAddress.fromLocation(robot.getLocation());
@@ -258,7 +261,6 @@ public class Robot {
 
     public int getEnemCnt() {
         // need to have more than 5 enemies nearby
-        RobotInfo[] nearbyRobots = rc.senseNearbyRobots();
         int numEnemies = 0;
         for (RobotInfo robot : nearbyRobots) {
             if (robot.getTeam() != rc.getTeam()) {
