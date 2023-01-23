@@ -14,6 +14,18 @@ public class Launcher extends Robot {
         robotType = RobotType.LAUNCHER;
     }
 
+    boolean inCombatPos = false; // if it reached combat position
+    boolean followCombatArea = false; // if this robot follows the combat area
+
+    public void tryMoveToCombatArea() throws GameActionException {
+        if (!followCombatArea) return;
+        if (MemoryCache.sizeBySec(rc, MemorySection.COMBAT) >= 1){
+            ArrayList<Integer> combatLocs = MemoryCache.readBySection(rc, MemorySection.COMBAT);
+            int combatLoc = combatLocs.get(random.nextInt(combatLocs.size()));
+            bindTo = MemoryAddress.toLocation(combatLoc);
+            state = 1;
+        }
+    }
 
     @Override
     public void run() throws GameActionException {
@@ -35,18 +47,17 @@ public class Launcher extends Robot {
             }
         }
 
-        // 40 percent to move to a combat area
-        if (random.nextFloat() < .4 && MemoryCache.sizeBySec(rc, MemorySection.COMBAT) >= 1){
-            ArrayList<Integer> combatLocs = MemoryCache.readBySection(rc, MemorySection.COMBAT);
-            int combatLoc = combatLocs.get(random.nextInt(combatLocs.size()));
-            bindTo = MemoryAddress.toLocation(combatLoc);
-            state = 1; // move to combat area
-        }
-
         MemoryCache.writeBackLocs(rc);
         switch (state) {
             case 0:
                 rc.setIndicatorString("initial state");
+                // 40 percent to move to a combat area
+                if (random.nextFloat() < .4){
+                    followCombatArea = true;
+                }
+
+                tryMoveToCombatArea();
+
                 float randNum = random.nextFloat();
                 boolean occupied = false; // see if the launcher have something to do
                 if (randNum < 0.2) {
@@ -80,6 +91,7 @@ public class Launcher extends Robot {
                 }
             case 4:
                 // explore randomly
+                tryMoveToCombatArea();
                 rc.setIndicatorString("exploring randomly");
                 randomMove();
                 break;
@@ -89,6 +101,7 @@ public class Launcher extends Robot {
                 }
                 rc.setIndicatorString("moving to randomly assigned location " + bindTo);
                 moveToward(bindTo);
+                tryMoveToCombatArea();
                 if (Map.diagonalDist(rc.getLocation(), bindTo) < 3) {
                     //// bindTo = null;
                     state = 3;
@@ -102,6 +115,7 @@ public class Launcher extends Robot {
                         state = 2;
                     } else {
                         state = 3;
+                        inCombatPos = true;
                     }
                     break;
                 }
@@ -110,6 +124,23 @@ public class Launcher extends Robot {
             case 3:
                 // if cannot see the target position, move toward it
                 rc.setIndicatorString("moving toward " + bindTo + " with kept in sight");
+
+                // if reached combat area, but this position is updated to be not combat area, move to random position
+                ArrayList<Integer> combatLocs = MemoryCache.readBySection(rc, MemorySection.COMBAT);
+                boolean nearCombat = false;
+                for (int encoded : combatLocs) {
+                    MapLocation combatLoc = MemoryAddress.toLocation(encoded);
+                    if (Map.diagonalDist(rc.getLocation(), combatLoc) < 3) {
+                        nearCombat = true;
+                        break;
+                    }
+                }
+
+                if (!nearCombat) {
+                    state = 5;
+                    break;
+                }
+
                 if (!rc.canSenseLocation(bindTo)) {
                     moveToward(bindTo);
                 }
