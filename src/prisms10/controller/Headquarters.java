@@ -2,10 +2,13 @@ package prisms10.controller;
 
 import battlecode.common.*;
 import prisms10.memory.MemoryAddress;
+import prisms10.memory.MemoryCache;
 import prisms10.memory.MemorySection;
 import prisms10.util.Map;
 
 public class Headquarters extends Robot {
+
+    public static final int MIN_COMBAT_FOR_GLOBAL = 4;    // minimum number of combats to trigger the global combat mode
 
     // the first few robots the headquarters will build
     static final RobotType[] initialRobots = {
@@ -75,15 +78,17 @@ public class Headquarters extends Robot {
                 Direction dir = Direction.values()[random.nextInt(Direction.values().length)];
                 MapLocation newLoc = rc.getLocation().add(dir);
                 float randNum = random.nextFloat();
-                if (randNum < 0.42) {
-                    // probability for carrier: 42%
+                // check the number of ongoing battles
+                int battles = MemoryCache.readBySection(rc, MemorySection.COMBAT).size();
+                if (randNum < ((battles >= MIN_COMBAT_FOR_GLOBAL)? 0.32: 0.56)) {
+                    // probability for carrier: 32% (battle); 50% (non-battle)
                     rc.setIndicatorString("Trying to build a carrier");
                     if (rc.canBuildRobot(RobotType.CARRIER, newLoc)) {
                         rc.buildRobot(RobotType.CARRIER, newLoc);
                         state++;
                     } else break;
                 } else if (randNum < 0.96) {
-                    // probability for launcher: 54%
+                    // probability for launcher: 64% (battle); 40% (non-battle)
                     rc.setIndicatorString("Trying to build a launcher");
                     if (rc.canBuildRobot(RobotType.LAUNCHER, newLoc)) {
                         rc.buildRobot(RobotType.LAUNCHER, newLoc);
