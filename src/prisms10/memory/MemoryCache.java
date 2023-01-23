@@ -3,6 +3,7 @@ package prisms10.memory;
 import battlecode.common.*;
 
 import java.util.*;
+import java.util.function.Predicate;
 
 public class MemoryCache {
 

@@ -4,6 +4,7 @@ import battlecode.common.GameActionException;
 import battlecode.common.RobotController;
 
 import java.util.ArrayList;
+import java.util.function.Predicate;
 
 public enum MemorySection {
 
@@ -75,6 +76,21 @@ public enum MemorySection {
         }
 
         return addresses;
+    }
+
+    public ArrayList<Integer> readSection(RobotController rc, Predicate<Integer> pred) throws GameActionException {
+
+        ArrayList<Integer> addresses = new ArrayList<>();
+
+        for (int i = this.getStartIdx(); i < this.getEndIdx(); i++) {
+            int address = rc.readSharedArray(i);
+            if (address != MemoryAddress.MASK_COORDS && pred.test(address)) {
+                addresses.add(address);
+            }
+        }
+
+        return addresses;
+
     }
 
     /**

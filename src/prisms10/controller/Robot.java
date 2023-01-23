@@ -6,6 +6,7 @@ import prisms10.util.*;
 
 import java.util.ArrayList;
 import java.util.Set;
+import java.util.function.Predicate;
 
 public class Robot {
 
@@ -93,16 +94,24 @@ public class Robot {
     }
 
     void randomMove() throws GameActionException {
-
-        ArrayList<Integer> myHeadquarters = MemorySection.HQ.readSection(rc);
-        ArrayList<Integer> enemyHeadquarters = MemorySection.ENEMY_HQ.readSection(rc);
-        ArrayList<Integer> wells = MemorySection.WELL.readSection(rc);
         MapLocation curLoc = rc.getLocation();
-        // calculate each point's grid weight
+        Predicate<Integer> hqFilter = (hqPos) -> (Map.sqEuclideanDist(MemoryAddress.toLocation(hqPos), curLoc) <= GridWeight.HQ_MAX_RADIUS);
+        Predicate<Integer> wellFilter = (wellPos) -> (Map.sqEuclideanDist(MemoryAddress.toLocation(wellPos), curLoc) <= GridWeight.WELL_MAX_RADIUS);
+        // only scan for places (headquarters and wells) that are within its max radius, which may affect the grid weight
+        ArrayList<Integer> myHeadquarters = MemorySection.HQ.readSection(rc, hqFilter);
+        ArrayList<Integer> enemyHeadquarters = MemorySection.ENEMY_HQ.readSection(rc, hqFilter);
+        ArrayList<Integer> wells = MemorySection.WELL.readSection(rc, wellFilter);
+        // calculate each point's grid weight around current location
         int[] nearbyGrid = new int[Direction.values().length];
+        boolean canMove = false;
         for (int i = 0; i < Direction.values().length - 1; i++) {
             // calculate grid weight of this point
             MapLocation afterMove = curLoc.add(Direction.values()[i]);
+            if (!rc.canMove(Direction.values()[i])) {
+                nearbyGrid[i] = 0;
+                continue;
+            }
+            canMove = true;
             nearbyGrid[i] = GridWeight.INITIAL;
             for (Integer myHQ : myHeadquarters) {
                 MapLocation myHQLoc = MemoryAddress.toLocation(myHQ);
@@ -118,19 +127,11 @@ public class Robot {
             }
 
         }
-
-        Direction randSel = random.randomSelect(Direction.values(), nearbyGrid);
-        if (!rc.canMove(randSel)) {
-            for (Direction cur : Direction.values()) {
-                if (rc.canMove(cur)) {
-                    rc.move(cur);
-                    return;
-                }
-            }
-        } else {
-            rc.move(randSel);
+        if (!canMove) {
+            return;
         }
-
+        Direction randSel = random.randomSelect(Direction.values(), nearbyGrid);
+        rc.move(randSel);
     }
 
 
