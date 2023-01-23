@@ -45,6 +45,14 @@ public class Robot {
     public void run() throws GameActionException {
         // scan nearby environment and record information to shared memory
         // TODO: reduce redundant scans to save bytecode
+        // TODO: minimize float usage / strictfp
+        // TODO: carrier self-defence
+        // TODO: launchers defend wells
+        // TODO: defend islands
+        // TODO: capture enemy islands
+        // TODO: arranged exploration
+        // TODO: symmetry detection and exploitation
+
         nearbyRobots = rc.senseNearbyRobots();
 
         scanForWells();
