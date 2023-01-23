@@ -6,6 +6,7 @@ import prisms10.util.*;
 
 import java.util.ArrayList;
 import java.util.Set;
+import java.util.function.Predicate;
 
 public class Robot {
 
@@ -45,8 +46,9 @@ public class Robot {
         // TODO: reduce redundant scans to save bytecode
         scanForWells();
         scanForSkyIslands();
-        scanForEnemyHQs();
+
         scanForCombat();
+        scanForEnemyHeadquarters();
     }
 
 
@@ -65,7 +67,7 @@ public class Robot {
         boolean rotateDir = random.nextBoolean();  // when one cannot move toward one direction, whether to rotate left or
         // right
         while (rc.isMovementReady() && (myLocation.x != destination.x || myLocation.y != destination.y)) {
-            Direction direction = Location.toDirection(destination.x - myLocation.x, destination.y - myLocation.y);
+            Direction direction = Map.directionTo(myLocation, destination);
             if (!toward) {
                 direction = direction.opposite();
             }
@@ -95,42 +97,44 @@ public class Robot {
     }
 
     void randomMove() throws GameActionException {
-        ArrayList<Integer> myHeadquarters = MemoryCache.readBySection(rc, MemorySection.HQ);
-        ArrayList<Integer> enemyHeadquarters = MemoryCache.readBySection(rc, MemorySection.ENEMY_HQ);
-        ArrayList<Integer> wells = MemoryCache.readBySection(rc, MemorySection.WELL);
         MapLocation curLoc = rc.getLocation();
-        // calculate each point's grid weight
+        Predicate<Integer> hqFilter = (hqPos) -> (Map.sqEuclideanDist(MemoryAddress.toLocation(hqPos), curLoc) <= GridWeight.HQ_MAX_RADIUS);
+        Predicate<Integer> wellFilter = (wellPos) -> (Map.sqEuclideanDist(MemoryAddress.toLocation(wellPos), curLoc) <= GridWeight.WELL_MAX_RADIUS);
+        // only scan for places (headquarters and wells) that are within its max radius, which may affect the grid weight
+        ArrayList<Integer> myHeadquarters = MemorySection.HQ.readSection(rc, hqFilter);
+        ArrayList<Integer> enemyHeadquarters = MemorySection.ENEMY_HQ.readSection(rc, hqFilter);
+        ArrayList<Integer> wells = MemorySection.WELL.readSection(rc, wellFilter);
+        // calculate each point's grid weight around current location
         int[] nearbyGrid = new int[Direction.values().length];
+        boolean canMove = false;
         for (int i = 0; i < Direction.values().length - 1; i++) {
             // calculate grid weight of this point
             MapLocation afterMove = curLoc.add(Direction.values()[i]);
+            if (!rc.canMove(Direction.values()[i])) {
+                nearbyGrid[i] = 0;
+                continue;
+            }
+            canMove = true;
             nearbyGrid[i] = GridWeight.INITIAL;
             for (Integer myHQ : myHeadquarters) {
                 MapLocation myHQLoc = MemoryAddress.toLocation(myHQ);
-                nearbyGrid[i] -= Math.max(0, GridWeight.HQ - Location.sqEuclidDistance(afterMove, myHQLoc) * GridWeight.HQ_DECAY);
+                nearbyGrid[i] -= Math.max(0, GridWeight.HQ - Map.sqEuclideanDist(afterMove, myHQLoc) * GridWeight.HQ_DECAY);
             }
             for (Integer enemyHQ : enemyHeadquarters) {
                 MapLocation enemyHQLoc = MemoryAddress.toLocation(enemyHQ);
-                nearbyGrid[i] += Math.max(0, GridWeight.HQ - Location.sqEuclidDistance(afterMove, enemyHQLoc) * GridWeight.HQ_DECAY);
+                nearbyGrid[i] += Math.max(0, GridWeight.HQ - Map.sqEuclideanDist(afterMove, enemyHQLoc) * GridWeight.HQ_DECAY);
             }
             for (Integer well : wells) {
                 MapLocation wellLoc = MemoryAddress.toLocation(well);
-                nearbyGrid[i] += Math.max(0, GridWeight.WELL - Location.sqEuclidDistance(afterMove, wellLoc) * GridWeight.WELL_DECAY);
+                nearbyGrid[i] += Math.max(0, GridWeight.WELL - Map.sqEuclideanDist(afterMove, wellLoc) * GridWeight.WELL_DECAY);
             }
 
         }
-
+        if (!canMove) {
+            return;
+        }
         Direction randSel = random.randomSelect(Direction.values(), nearbyGrid);
-        if (!rc.canMove(randSel)) {
-            for (Direction cur : Direction.values()) {
-                if (rc.canMove(cur)) {
-                    rc.move(cur);
-                    return;
-                }
-            }
-        } else {
-            rc.move(randSel);
-        }
+        rc.move(randSel);
     }
 
 
@@ -138,50 +142,54 @@ public class Robot {
      * Scan for nearby wells and write their locations to shared memory
      */
     void scanForWells() throws GameActionException {
-        WellInfo[] wells = rc.senseNearbyWells();
-        for (WellInfo well : wells) {
-            int s = MemoryAddress.fromLocation(well.getMapLocation(), well.getResourceType());
+
+        for (WellInfo well : rc.senseNearbyWells()) {
+
+            int address = MemoryAddress.fromResourceLocation(well.getResourceType(), well.getMapLocation());
+
             boolean toWrite = true;
             for (int i = MemorySection.IDX_WELL; i < MemorySection.IDX_HQ; i++) {
-                if (s == rc.readSharedArray(i)) {
+                if (address == rc.readSharedArray(i)) {
                     toWrite = false;
                     break;
                 }
             }
+
             if (toWrite) {
-                Set<Integer> wellLocs = MemoryCache.locsToWrite.get(MemorySection.WELL);
-                assert wellLocs != null : "locationsToWrite should be initialized in static block";
-                wellLocs.add(s);
+                Set<Integer> wells = MemoryCache.locsToWrite.get(MemorySection.WELL);
+                assert wells != null : "locationsToWrite should be initialized in static block";
+                wells.add(address);
             }
+
         }
+
     }
 
-    private void scanForEnemyHQs() throws GameActionException {
+    private void scanForEnemyHeadquarters() throws GameActionException {
+
         // first check if all enemy headquarters are found
         boolean allFound = true;
         for (int i = MemorySection.ENEMY_HQ.getStartIdx(); i < MemorySection.ENEMY_HQ.getEndIdx(); i++) {
-            if (rc.readSharedArray(i) == MemoryAddress.MASK_COORDS) {
+            if (MemoryAddress.isInitial(rc.readSharedArray(i))) {
                 allFound = false;
                 break;
             }
         }
-        if (allFound) {
-            return;
-        }
+        if (allFound) return;
 
-        RobotInfo[] robots = rc.senseNearbyRobots();
-        for (RobotInfo robot : robots) {
+        for (RobotInfo robot : rc.senseNearbyRobots()) {
             if (robot.getType() == RobotType.HEADQUARTERS && robot.getTeam() != rc.getTeam()) {
                 // make sure this is an enemy headquarters
-                int s = MemoryAddress.fromLocation(robot.getLocation());
-                boolean toWrite = true;
-                if (MemoryCache.exist(rc, s, MemorySection.ENEMY_HQ) == -1) {
-                    Set<Integer> enemyHQlocs = MemoryCache.locsToWrite.get(MemorySection.ENEMY_HQ);
-                    assert enemyHQlocs != null : "locationsToWrite should be initialized in static block";
-                    enemyHQlocs.add(s);
+                int address = MemoryAddress.fromLocation(robot.getLocation());
+
+                if (MemorySection.ENEMY_HQ.contains(rc, address) == -1) {
+                    Set<Integer> enemyHeadquarters = MemoryCache.locsToWrite.get(MemorySection.ENEMY_HQ);
+                    assert enemyHeadquarters != null : "locationsToWrite should be initialized in static block";
+                    enemyHeadquarters.add(address);
                 }
             }
         }
+
     }
 
     private void scanForSkyIslands() throws GameActionException {
@@ -190,7 +198,7 @@ public class Robot {
 
             final int index = islandID + MemorySection.SKY_ISLAND.getStartIdx();
             final int currentMemoryAddress = rc.readSharedArray(index);
-            final int occupationStatus = MemoryAddress.fromTeam(rc.senseTeamOccupyingIsland(islandID), rc.getTeam());
+            final int occupationStatus = MemoryAddress.fromOccupationStatus(rc.senseTeamOccupyingIsland(islandID), rc.getTeam());
 
             if (MemoryAddress.isInitial(currentMemoryAddress)) {
                 // memory is empty, write the location of the island
@@ -227,7 +235,7 @@ public class Robot {
     public void scanForCombat() throws GameActionException {
         if (getEnemCnt() < MIN_COMBAT_ENEMY){
             // if not in combat, check if this location is reported to be in combat in sh mem
-            int curLoc = MemoryCache.exist(rc, MemoryAddress.fromLocation(rc.getLocation()), MemorySection.COMBAT);
+            int curLoc = MemorySection.COMBAT.contains(rc, MemoryAddress.fromLocation(rc.getLocation()));
             if (curLoc != -1 && rc.canWriteSharedArray(curLoc, MemoryAddress.MASK_COORDS)) {
                 // if this location is reported to be in combat, clear the record
                 rc.writeSharedArray(curLoc, MemoryAddress.MASK_COORDS);
@@ -235,7 +243,7 @@ public class Robot {
             return;
         }
 
-        if (MemoryCache.exist(rc, MemoryAddress.fromLocation(rc.getLocation()), MemorySection.COMBAT) == 1) {
+        if (MemorySection.COMBAT.contains(rc, MemoryAddress.fromLocation(rc.getLocation())) == 1) {
             return;
         }
         // do not use cache for this, because info in cache is not updated

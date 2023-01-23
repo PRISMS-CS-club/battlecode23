@@ -18,17 +18,7 @@ public class MemoryCache {
 
     static public int firstEmpty(RobotController rc, MemorySection type) throws GameActionException {
         // return -1 if not found, otherwise return the index
-        return exist(rc, MemoryAddress.MASK_COORDS, type);
-    }
-
-    public static int exist(RobotController rc, int x, MemorySection type) throws GameActionException {
-        // return -1 if not found, otherwise return the index
-        for (int i = type.getStartIdx(); i < type.getEndIdx(); i++) {
-            if (rc.readSharedArray(i) == x) {
-                return i;
-            }
-        }
-        return -1;
+        return type.contains(rc, MemoryAddress.MASK_COORDS);
     }
 
     public static int sizeBySec(RobotController rc, MemorySection type) throws GameActionException {
@@ -52,7 +42,7 @@ public class MemoryCache {
             while (it.hasNext()) {
                 int loc = it.next();
                 int empPos;
-                if (exist(rc, loc, type) != -1) {
+                if (type.contains(rc, loc) != -1) {
                     // already exist, remove it
                     it.remove();
                 } else if ((empPos = firstEmpty(rc, type)) != -1) {

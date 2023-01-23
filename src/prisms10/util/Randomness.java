@@ -79,15 +79,16 @@ public class Randomness {
         return new MapLocation(nextInt(rc.getMapWidth()), nextInt(rc.getMapHeight()));
     }
 
-    public MapLocation randSelectEnemyHQ(RobotController rc) throws GameActionException {
-        ArrayList<MapLocation> enemyHQs = new ArrayList<>();
-        for (int encoded : MemoryCache.readBySection(rc, MemorySection.ENEMY_HQ)) {
-            enemyHQs.add(MemoryAddress.toLocation(encoded));
+    public MapLocation randSelectEnemyHeadquarters(RobotController rc) throws GameActionException {
+        ArrayList<MapLocation> enemyHeadquarters = new ArrayList<>();
+        for (int encoded : MemorySection.ENEMY_HQ.readSection(rc)) {
+            enemyHeadquarters.add(MemoryAddress.toLocation(encoded));
         }
-        if (enemyHQs.size() == 0) {
+        if (enemyHeadquarters.size() == 0) {
             return null;
         }
-        return enemyHQs.get(Math.abs(nextInt()) % enemyHQs.size());
+        return enemyHeadquarters.get(Math.abs(nextInt()) % enemyHeadquarters.size());
     }
+
 
 }

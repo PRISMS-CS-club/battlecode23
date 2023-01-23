@@ -3,7 +3,7 @@ package prisms10.controller;
 import battlecode.common.*;
 import prisms10.memory.MemoryAddress;
 import prisms10.memory.MemorySection;
-import prisms10.util.Location;
+import prisms10.util.Map;
 
 public class Headquarters extends Robot {
 
@@ -30,9 +30,9 @@ public class Headquarters extends Robot {
                 rc.writeSharedArray(i, MemoryAddress.MASK_COORDS);
             }
             // initialize nearby well info
-            scanForWells();
+            super.run();
         }
-        // record the current headquarter's position into shared memory
+        // record the current headquarters' position into shared memory
         int currentLocation = MemoryAddress.fromLocation(rc.getLocation());
         for (int i = 8; i < 11; i++) {
             int data = rc.readSharedArray(i);
@@ -48,7 +48,7 @@ public class Headquarters extends Robot {
         // produce first few items as scheduled in array `initialRobots`
         if (state < initialRobots.length) {
             // randomly select one location on the rim of the HQ to build a robot
-            MapLocation[] rimLocs = Location.getCircleRimLocs(rc.getLocation(), robotType.actionRadiusSquared);
+            MapLocation[] rimLocs = Map.getCircleRimLocs(rc.getLocation(), robotType.actionRadiusSquared);
             // randomly select the first robot
             do {
                 RobotType curType = initialRobots[state];

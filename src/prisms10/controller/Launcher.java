@@ -2,7 +2,7 @@ package prisms10.controller;
 
 import battlecode.common.*;
 import prisms10.memory.*;
-import prisms10.util.Location;
+import prisms10.util.Map;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,7 +50,7 @@ public class Launcher extends Robot {
                 float randNum = random.nextFloat();
                 boolean occupied = false; // see if the launcher have something to do
                 if (randNum < 0.2) {
-                    List<Integer> headquarters = MemoryCache.readBySection(rc, MemorySection.HQ);
+                    List<Integer> headquarters = MemorySection.HQ.readSection(rc);
                     if (headquarters.size() > 0) {
                         bindTo =
                                 MemoryAddress.toLocation(headquarters.get(Math.abs(random.nextInt()) % headquarters.size()));
@@ -58,7 +58,7 @@ public class Launcher extends Robot {
                         occupied = true;
                     }
                 } else if (randNum < 0.55) {
-                    List<Integer> headquarters = MemoryCache.readBySection(rc, MemorySection.ENEMY_HQ);
+                    List<Integer> headquarters = MemorySection.ENEMY_HQ.readSection(rc);
                     if (headquarters.size() > 0) {
                         bindTo =
                                 MemoryAddress.toLocation(headquarters.get(Math.abs(random.nextInt()) % headquarters.size()));
@@ -66,7 +66,7 @@ public class Launcher extends Robot {
                         occupied = true;
                     }
                 } else if (randNum < 0.9) {
-                    List<Integer> skyIsland = MemoryCache.readBySection(rc, MemorySection.SKY_ISLAND);
+                    List<Integer> skyIsland = MemorySection.SKY_ISLAND.readSection(rc);
                     if (skyIsland.size() > 0) {
                         bindTo = MemoryAddress.toLocation(skyIsland.get(Math.abs(random.nextInt()) % skyIsland.size()));
                         state = 1;
@@ -89,7 +89,7 @@ public class Launcher extends Robot {
                 }
                 rc.setIndicatorString("moving to randomly assigned location " + bindTo);
                 moveToward(bindTo);
-                if (Location.diagonalDist(rc.getLocation(), bindTo) < 3) {
+                if (Map.diagonalDist(rc.getLocation(), bindTo) < 3) {
                     //// bindTo = null;
                     state = 3;
                 }
@@ -114,7 +114,7 @@ public class Launcher extends Robot {
                     moveToward(bindTo);
                 }
                 // if moving too close to the target, move away from it
-                if (Location.diagonalDist(bindTo, rc.getLocation()) <= 1) {
+                if (Map.diagonalDist(bindTo, rc.getLocation()) <= 1) {
                     moveToward(bindTo, false, true);
                 }
                 // otherwise, random move
@@ -130,7 +130,7 @@ public class Launcher extends Robot {
                 MapLocation location = rc.getLocation();
                 rc.setIndicatorString("Staying at position " + location);
                 // because headquarter's action radius is 9, the launcher have to stay 9 distance away from headquarter
-                if (Location.sqEuclidDistance(bindTo, moveToward(bindTo, true, false)) > 9) {
+                if (Map.sqEuclideanDist(bindTo, moveToward(bindTo, true, false)) > 9) {
                     moveToward(bindTo);
                 } else {
                     Direction windDirection = rc.senseMapInfo(location).getCurrentDirection();

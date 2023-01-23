@@ -2,7 +2,7 @@ package prisms10.controller;
 
 import battlecode.common.*;
 import prisms10.memory.*;
-import prisms10.util.Location;
+import prisms10.util.Map;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -108,7 +108,7 @@ public class Carrier extends Robot {
                         if (read != MemoryAddress.MASK_COORDS && ((read & MemoryAddress.MASK_SUBTYPE) == 0)) {
                             // if the island has not been marked, navigate the bot to it
                             MapLocation skyIsland = MemoryAddress.toLocation(read);
-                            int distance = Location.diagonalDist(skyIsland, rc.getLocation());
+                            int distance = Map.diagonalDist(skyIsland, rc.getLocation());
                             if (distance < minDist) {
                                 minDist = distance;
                                 bindTo = skyIsland;
@@ -139,7 +139,7 @@ public class Carrier extends Robot {
                         int read = rc.readSharedArray(i);
                         if (read != MemoryAddress.MASK_COORDS) {
                             MapLocation headquarter = MemoryAddress.toLocation(read);
-                            int distance = Location.diagonalDist(headquarter, rc.getLocation());
+                            int distance = Map.diagonalDist(headquarter, rc.getLocation());
                             if (distance < minDist) {
                                 minDist = distance;
                                 bindTo = headquarter;
