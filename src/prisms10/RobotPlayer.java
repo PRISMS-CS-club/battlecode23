@@ -1,6 +1,8 @@
 package prisms10;
 
-import battlecode.common.*;
+import battlecode.common.Clock;
+import battlecode.common.RobotController;
+import battlecode.common.GameActionException;
 import prisms10.controller.*;
 
 /**
@@ -8,7 +10,7 @@ import prisms10.controller.*;
  * The run() method inside this class is like your main function: this is what we'll call once your robot
  * is created!
  */
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "InfiniteLoopStatement"})
 public strictfp class RobotPlayer {
 
     static int turnCount = 0;
@@ -20,8 +22,7 @@ public strictfp class RobotPlayer {
      * @param rc The RobotController object. You use it to perform actions from this robot, and to get
      *           information on its current status. Essentially your portal to interacting with the world.
      */
-    @SuppressWarnings({"unused", "InfiniteLoopStatement"})
-    public static void run(RobotController rc) throws GameActionException {
+    public static void run(RobotController rc) {
 
         Robot robot = null;
 
@@ -52,7 +53,8 @@ public strictfp class RobotPlayer {
 
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode.
             try {
-
+                // Call the run() method of the robot we instantiated above.
+                assert robot != null;
                 robot.run();
 
             } catch (GameActionException e) {

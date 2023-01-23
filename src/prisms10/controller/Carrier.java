@@ -1,26 +1,22 @@
 package prisms10.controller;
 
 import battlecode.common.*;
-import prisms10.memory.MemoryAddress;
-import prisms10.memory.MemorySection;
-import prisms10.memory.SharedMemory;
-import prisms10.util.Location;
-import prisms10.util.RandomNumber;
+import prisms10.memory.*;
+import prisms10.util.Map;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class Carrier extends Robot {
 
+    private int bindToIslandID;  // if the carrier is moving an anchor to an island, this field sets to the island ID it binds to
+
     public Carrier(RobotController rc) {
         super(rc);
         robotType = RobotType.CARRIER;
     }
 
-    /**
-     * Run a single turn for a Carrier.
-     * This code is wrapped inside the infinite loop in run(), so it is called once per turn.
-     */
+
     @Override
     public void run() throws GameActionException {
 
@@ -66,19 +62,19 @@ public class Carrier extends Robot {
                     for (int i = MemorySection.IDX_WELL; i < MemorySection.IDX_HQ; i++) {
                         // find a valid well and set it for target
                         int pos = rc.readSharedArray(i);
-                        if (pos != MemoryAddress.LOCATION_DEFAULT) {
+                        if (pos != MemoryAddress.MASK_COORDS) {
                             locations.add(MemoryAddress.toLocation(pos));
                         }
                     }
                     if (locations.size() != 0) {
                         // if the robot can find a well, target toward the well
-                        bindTo = locations.get(Math.abs(RandomNumber.nextInt()) % locations.size());
+                        bindTo = locations.get(Math.abs(random.nextInt()) % locations.size());
                         changeState(1);
                         break;
                     }
                 }
                 // if the bot does not find any job, wander randomly
-                Direction dir = Direction.values()[(RandomNumber.nextInt() % 8 + 8) % 8];
+                Direction dir = Direction.values()[(random.nextInt() % 8 + 8) % 8];
                 if (rc.canMove(dir)) {
                     rc.move(dir);
                 }
@@ -105,24 +101,25 @@ public class Carrier extends Robot {
             case 2:
                 stateCounter++;
                 if (bindTo == null) {
+                    bindToIslandID = -1;
                     int minDist = Integer.MAX_VALUE;
                     for (int i = 0; i < 36; i++) {
                         int read = rc.readSharedArray(i + MemorySection.IDX_SKY_ISLAND);
-                        if (read != MemoryAddress.LOCATION_DEFAULT && ((read & MemoryAddress.MEMORY_MARK) == 0)) {
+                        if (read != MemoryAddress.MASK_COORDS && ((read & MemoryAddress.MASK_SUBTYPE) == 0)) {
                             // if the island has not been marked, navigate the bot to it
                             MapLocation skyIsland = MemoryAddress.toLocation(read);
-                            int distance = Location.diagonalDist(skyIsland, rc.getLocation());
+                            int distance = Map.diagonalDist(skyIsland, rc.getLocation());
                             if (distance < minDist) {
                                 minDist = distance;
                                 bindTo = skyIsland;
+                                bindToIslandID = i;
                             }
                         }
                     }
                 }
-                // if can place anchor, place it
-                if (rc.canPlaceAnchor()) {
+                // if arrived at bindTo location and can place anchor, place it
+                if (rc.senseIsland(rc.getLocation()) == bindToIslandID && rc.canPlaceAnchor()) {
                     rc.placeAnchor();
-                    bindTo = null;
                     changeState(3);
                 }
                 // otherwise, walk toward the sky island
@@ -140,9 +137,9 @@ public class Carrier extends Robot {
                     int minDist = Integer.MAX_VALUE;
                     for (int i = MemorySection.IDX_HQ; i < MemorySection.IDX_SKY_ISLAND; i++) {
                         int read = rc.readSharedArray(i);
-                        if (read != MemoryAddress.LOCATION_DEFAULT) {
+                        if (read != MemoryAddress.MASK_COORDS) {
                             MapLocation headquarter = MemoryAddress.toLocation(read);
-                            int distance = Location.diagonalDist(headquarter, rc.getLocation());
+                            int distance = Map.diagonalDist(headquarter, rc.getLocation());
                             if (distance < minDist) {
                                 minDist = distance;
                                 bindTo = headquarter;
@@ -166,7 +163,7 @@ public class Carrier extends Robot {
                 break;
         }
         // clear up repeated information in locationsToWrite array
-        SharedMemory.writeBackLocs(rc);
+        MemoryCache.writeBackLocs(rc);
 
     }
 

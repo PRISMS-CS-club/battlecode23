@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 import java.util.*;
 
-public class SharedMemory {
+public class MemoryCache {
 
 
     //    static Set<Integer> locationsToWrite = new HashSet<>(); // Every important location that is scheduled to record into shared memory
@@ -16,31 +16,22 @@ public class SharedMemory {
         }
     }
 
-    static int firEmptyInShMem(RobotController rc, MemorySection type) throws GameActionException {
+    static public int firstEmpty(RobotController rc, MemorySection type) throws GameActionException {
         // return -1 if not found, otherwise return the index
-        return existInShMem(rc, MemoryAddress.LOCATION_DEFAULT, type);
+        return type.contains(rc, MemoryAddress.MASK_COORDS);
     }
 
-    public static int existInShMem(RobotController rc, int x, MemorySection type) throws GameActionException {
-        // return -1 if not found, otherwise return the index
+    public static int sizeBySec(RobotController rc, MemorySection type) throws GameActionException {
+        int size = 0;
         for (int i = type.getStartIdx(); i < type.getEndIdx(); i++) {
-            if (rc.readSharedArray(i) == x) {
-                return i;
+            if (rc.readSharedArray(i) != MemoryAddress.MASK_COORDS) {
+                size++;
             }
         }
-        return -1;
+        return size;
     }
 
     public static void writeBackLocs(RobotController rc) throws GameActionException {
-//        for (int i = SHARED_MEMORY_WELLS; i < SHARED_MEMORY_HQ; i++) {
-//            if (rc.readSharedArray(i) == 0) {
-//                if (locationsToWrite.size() > 0) {
-//                    rc.writeSharedArray(i, locationsToWrite.remove(0));
-//                } else {
-//                    break;
-//                }
-//            }
-//        }
         // check different types of locs, and write them back into shared mem
         for (MemorySection type : MemorySection.values()) {
             int st = type.getStartIdx();
@@ -51,10 +42,10 @@ public class SharedMemory {
             while (it.hasNext()) {
                 int loc = it.next();
                 int empPos;
-                if (existInShMem(rc, loc, type) != -1) {
+                if (type.contains(rc, loc) != -1) {
                     // already exist, remove it
                     it.remove();
-                } else if ((empPos = firEmptyInShMem(rc, type)) != -1) {
+                } else if ((empPos = firstEmpty(rc, type)) != -1) {
                     // don't exist, need to test if there are still space to write
                     if (rc.canWriteSharedArray(empPos, loc)) {
                         rc.writeSharedArray(empPos, loc);
@@ -69,15 +60,20 @@ public class SharedMemory {
     /**
      * read all values in a specific section of shared memory
      */
-    public static ArrayList<Integer> readShMemBySec(RobotController rc, MemorySection sec) throws GameActionException {
+    public static ArrayList<Integer> readBySection(RobotController rc, MemorySection sec) throws GameActionException {
         ArrayList<Integer> locs = new ArrayList<>();
         for (int i = sec.getStartIdx(); i < sec.getEndIdx(); i++) {
             int loc = rc.readSharedArray(i);
-            if (loc != MemoryAddress.LOCATION_DEFAULT) {
+            if (loc != MemoryAddress.MASK_COORDS) {
                 locs.add(loc);
             }
         }
         return locs;
     }
 
+    public static void delPosInSec(RobotController rc, int pos, MemorySection sec) throws GameActionException {
+        if (rc.canWriteSharedArray(pos, MemoryAddress.MASK_COORDS)) {
+            rc.writeSharedArray(pos, MemoryAddress.MASK_COORDS);
+        }
+    }
 }
