@@ -3,6 +3,7 @@ package prisms10.memory;
 import battlecode.common.*;
 
 import java.util.*;
+import java.util.function.Predicate;
 
 public class MemoryCache {
 
@@ -65,6 +66,21 @@ public class MemoryCache {
         for (int i = sec.getStartIdx(); i < sec.getEndIdx(); i++) {
             int loc = rc.readSharedArray(i);
             if (loc != MemoryAddress.MASK_COORDS) {
+                locs.add(loc);
+            }
+        }
+        return locs;
+    }
+
+    /**
+     * read all valid values in a specific section of shared memory
+     * the predicate filters out places that are not needed
+     */
+    public static ArrayList<Integer> readBySection(RobotController rc, MemorySection sec, Predicate<Integer> pred) throws GameActionException {
+        ArrayList<Integer> locs = new ArrayList<>();
+        for (int i = sec.getStartIdx(); i < sec.getEndIdx(); i++) {
+            int loc = rc.readSharedArray(i);
+            if (loc != MemoryAddress.MASK_COORDS && pred.test(loc)) {
                 locs.add(loc);
             }
         }
