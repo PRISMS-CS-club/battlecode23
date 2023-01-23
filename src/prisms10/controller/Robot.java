@@ -233,7 +233,7 @@ public class Robot {
     }
 
     public void scanForCombat() throws GameActionException {
-        if (getEnemCnt() < MIN_COMBAT_ENEMY){
+        if (getEnemCnt() < MIN_COMBAT_ENEMY) {
             // if not in combat, check if this location is reported to be in combat in sh mem
             int curLoc = MemorySection.COMBAT.contains(rc, MemoryAddress.fromLocation(rc.getLocation()));
             if (curLoc != -1 && rc.canWriteSharedArray(curLoc, MemoryAddress.MASK_COORDS)) {
@@ -256,7 +256,7 @@ public class Robot {
         }
     }
 
-    public int getEnemCnt(){
+    public int getEnemCnt() {
         // need to have more than 5 enemies nearby
         RobotInfo[] nearbyRobots = rc.senseNearbyRobots();
         int numEnemies = 0;
@@ -269,9 +269,12 @@ public class Robot {
     }
 
 
-
-    public int getFullHealth(){
-        switch (rc.getType()){
+    /**
+     * @deprecated use {@link RobotType#health} instead
+     */
+    @Deprecated
+    public int getFullHealth() {
+        switch (rc.getType()) {
             case CARRIER:
                 return 150;
             case LAUNCHER:
