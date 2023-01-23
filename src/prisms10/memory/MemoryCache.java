@@ -57,18 +57,4 @@ public class MemoryCache {
         }
     }
 
-    /**
-     * read all values in a specific section of shared memory
-     */
-    public static ArrayList<Integer> readBySection(RobotController rc, MemorySection sec) throws GameActionException {
-        ArrayList<Integer> locs = new ArrayList<>();
-        for (int i = sec.getStartIdx(); i < sec.getEndIdx(); i++) {
-            int loc = rc.readSharedArray(i);
-            if (loc != MemoryAddress.MASK_COORDS) {
-                locs.add(loc);
-            }
-        }
-        return locs;
-    }
-
 }
