@@ -52,6 +52,7 @@ public class Robot {
         // TODO: capture enemy islands
         // TODO: arranged exploration
         // TODO: symmetry detection and exploitation
+        // TODO: pathfinding around walls
 
         nearbyRobots = rc.senseNearbyRobots();
 
@@ -59,7 +60,7 @@ public class Robot {
         scanForSkyIslands();
 
         scanForCombat();
-        scanForEnemyHeadquarters();
+        scanForEnemyHQ();
     }
 
 
@@ -176,7 +177,7 @@ public class Robot {
 
     }
 
-    private void scanForEnemyHeadquarters() throws GameActionException {
+    private void scanForEnemyHQ() throws GameActionException {
 
         // first check if all enemy headquarters are found
         boolean allFound = true;
