@@ -139,7 +139,8 @@ public class Launcher extends Robot {
                 }
 
                 if (!nearCombat) {
-                    state = 5;
+                    followCombatArea = false;
+                    state = 0;
                     break;
                 }
 
