@@ -26,8 +26,8 @@ public class Headquarters extends Robot {
     @Override
     public void run() throws GameActionException {
         // initialize
-        if ((rc.readSharedArray(63) & 0x8000) == 0) {
-            rc.writeSharedArray(63, 0x8000);
+        if ((rc.readSharedArray(MemorySection.IDX_GAME_STAT) & 0x8000) == 0) {
+            rc.writeSharedArray(MemorySection.IDX_GAME_STAT, 0x8000);
             // initialize shared memory
             for (int i = 0; i < MemorySection.IDX_COMBAT_END; i++) {
                 rc.writeSharedArray(i, MemoryAddress.MASK_COORDS);

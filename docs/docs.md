@@ -30,9 +30,11 @@ Special:
 - integer 12-47: position of every sky island
 - integer 48-51: position of every enemy headquarters
 - integer 52-57: positions of intense combat
-- integer 63: memory status indicator
-    - format: `I___ ____ ____ ____`
+- integer 63: game and memory status indicator
+    - format: `ISSS ____ ____ ____`
     - `I`: Whether memory is initialized, either 0 or 1.
+    - `S`: Speculation of map symmetry
+      - First digit for reflection over x, second digit for reflection over y, third digit for rotating 180 degree.
 
 ## Robot states
 
