@@ -156,14 +156,17 @@ public class Robot {
      * Scan for nearby wells and write their locations to shared memory
      */
     void scanForWells() throws GameActionException {
+        int currentRound = rc.getRoundNum();
 
         for (WellInfo well : rc.senseNearbyWells()) {
 
-            int address = MemoryAddress.fromResourceLocation(well.getResourceType(), well.getMapLocation());
+            int address = MemoryAddress.fromResourceLocation(well.getResourceType(), well.getMapLocation(), currentRound);
 
             boolean toWrite = true;
             for (int i = MemorySection.IDX_WELL; i < MemorySection.IDX_HQ; i++) {
-                if (address == rc.readSharedArray(i)) {
+                int memoryIth = rc.readSharedArray(i);
+                if ((address & MemoryAddress.MASK_COORDS) == (memoryIth & MemoryAddress.MASK_COORDS) &&
+                        (address & MemoryAddress.MASK_TIMESTAMP) <= (memoryIth & MemoryAddress.MASK_TIMESTAMP)) {
                     toWrite = false;
                     break;
                 }
@@ -208,13 +211,15 @@ public class Robot {
 
     private void scanForSkyIslands() throws GameActionException {
 
+        int curTimestamp = MemoryAddress.fromNumRounds(rc.getRoundNum());
+
         for (int islandID : rc.senseNearbyIslands()) {
 
             final int index = islandID + MemorySection.SKY_ISLAND.getStartIdx();
-            final int currentMemoryAddress = rc.readSharedArray(index);
+            final int islandMemoryAddress = rc.readSharedArray(index);
             final int occupationStatus = MemoryAddress.fromOccupationStatus(rc.senseTeamOccupyingIsland(islandID), rc.getTeam());
 
-            if (MemoryAddress.isInitial(currentMemoryAddress)) {
+            if (MemoryAddress.isInitial(islandMemoryAddress) || (islandMemoryAddress & MemoryAddress.MASK_TIMESTAMP) < curTimestamp) {
                 // memory is empty, write the location of the island
                 MapLocation locationToWrite = new MapLocation(Integer.MAX_VALUE, Integer.MAX_VALUE);
 
@@ -226,17 +231,17 @@ public class Robot {
                 }
 
                 // TODO: 存入 cache
-                final int newMemoryAddress = occupationStatus | MemoryAddress.fromLocation(locationToWrite);
+                final int newMemoryAddress = curTimestamp | occupationStatus | MemoryAddress.fromLocation(locationToWrite);
                 if (rc.canWriteSharedArray(index, newMemoryAddress)) {
                     rc.writeSharedArray(index, newMemoryAddress);
                 }
 
             } else {
                 // already recorded the location, update the occupation status
-                int newMemoryAddress = occupationStatus | MemoryAddress.extractCoords(currentMemoryAddress);
+                int newMemoryAddress = curTimestamp | occupationStatus | MemoryAddress.extractCoords(islandMemoryAddress);
 
                 // TODO: 分类讨论直接写入还是存到 cache 里
-                if (newMemoryAddress != currentMemoryAddress && rc.canWriteSharedArray(index, newMemoryAddress)) {
+                if (newMemoryAddress != islandMemoryAddress && rc.canWriteSharedArray(index, newMemoryAddress)) {
                     rc.writeSharedArray(index, newMemoryAddress);
                 }
 

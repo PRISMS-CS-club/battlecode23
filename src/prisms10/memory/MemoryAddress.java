@@ -7,7 +7,7 @@ import battlecode.common.Team;
 public class MemoryAddress {
 
     // memory address masks
-    public static final int MASK_COUNTER = 0xC000;
+    public static final int MASK_TIMESTAMP = 0xC000;
     public static final int MASK_SUBTYPE = 0x3000;
     public static final int MASK_X_COORDINATE = 0x0FC0;
     public static final int MASK_Y_COORDINATE = 0x003F;
@@ -16,6 +16,14 @@ public class MemoryAddress {
 
     public static boolean isInitial(int address) {
         return address == MASK_COORDS;
+    }
+
+    /**
+     * Convert the number of rounds to the 2-bit timestamp value
+     * @return time stamp
+     */
+    public static int fromNumRounds(int numRound) {
+        return (numRound / 500) << 14;
     }
 
     /**
@@ -33,8 +41,8 @@ public class MemoryAddress {
         return (location.x << 6) + location.y;
     }
 
-    public static int fromResourceLocation(ResourceType type, MapLocation location) {
-        return (type.resourceID << 12) + fromLocation(location);
+    public static int fromResourceLocation(ResourceType type, MapLocation location, int numRound) {
+        return fromNumRounds(numRound) | (type.resourceID << 12) | fromLocation(location);
     }
 
     public static int fromOccupationStatus(Team occupying, Team self) {
