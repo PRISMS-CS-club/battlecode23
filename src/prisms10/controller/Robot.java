@@ -53,6 +53,7 @@ public class Robot {
         // TODO: arranged exploration
         // TODO: symmetry detection and exploitation
         // TODO: pathfinding around walls
+        // TODO: miners should consider their relative position to the well and make way for other miners
 
         nearbyRobots = rc.senseNearbyRobots();
 
