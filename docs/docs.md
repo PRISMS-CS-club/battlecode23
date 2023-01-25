@@ -34,7 +34,8 @@ Special:
     - format: `ISSS ____ ____ ____`
     - `I`: Whether memory is initialized, either 0 or 1.
     - `S`: Speculation of map symmetry
-      - First digit for reflection over x, second digit for reflection over y, third digit for rotating 180 degree.
+        - First digit for horizontal reflection, second digit for vertical reflection, third digit for rotation.
+        - `0` means to be verified, `1` means proven invalid.
 
 ## Robot states
 
@@ -67,7 +68,7 @@ anchor, it will self-destruct.
 | 2      | staying in one fixed location without movement                                           |
 | 3      | moving around the target with it kept in sight                                           |
 | 4      | always do random movement. Do not actively searching for work                            |
-| 5      | moving to randomly assigned location, when reached, turn to state 3                      |
+| 5      | idle. will try to verify symmetries                                                      |
 
 Assignment of launchers
 
@@ -76,7 +77,7 @@ Assignment of launchers
 | around own base    | 20%    |
 | at enemy's base    | 35%    |
 | around sky islands | 35%    |
-| random moving      | 10%    |
+| going to state 5   | 10%    |
 
 ## Grid Weight
 
