@@ -6,7 +6,7 @@
 CCTT XXXX XXYY YYYY
 ```
 
-- `C`: 4 bit counter. Counts the number of robots around a location.
+- `C`: 2 bit time stamp. Records the time of this information being taken.
 - `T`: 2 bit mark indicating the current location's subtype
     - Wells
         - `01`: Ad well
