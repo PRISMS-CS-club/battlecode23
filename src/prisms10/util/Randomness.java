@@ -54,7 +54,7 @@ public class Randomness {
         for (int i = 1; i < prefixSum.length; i++) {
             prefixSum[i] += prefixSum[i - 1];
         }
-        int rand = (int) (nextFloat() * prefixSum[prefixSum.length - 1]);
+        int rand = Math.abs(nextInt()) % prefixSum[prefixSum.length - 1];
         int index = upperBound(prefixSum, rand, -1, prefixSum.length);
         return objects[index];
     }
