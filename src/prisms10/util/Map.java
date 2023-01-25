@@ -138,6 +138,27 @@ public class Map {
         return new MapLocation(mapWidth - loc.x - 1, mapHeight - loc.y - 1);
     }
 
+    /**
+     * Calculates either the horizontal, vertical, or rotational reflection of a given point.
+     *
+     * @param loc       the point to reflect
+     * @param mapWidth  the width of the map
+     * @param mapHeight the height of the map
+     * @param symmetry  the symmetry to use. {@code 0} for horizontal, {@code 1} for vertical, {@code 2} for rotational
+     */
+    public static MapLocation reflect(MapLocation loc, int mapWidth, int mapHeight, int symmetry) {
+        switch (symmetry) {
+            case 0:
+                return reflectHorizontally(loc, mapHeight);
+            case 1:
+                return reflectVertically(loc, mapWidth);
+            case 2:
+                return reflectRotationally(loc, mapWidth, mapHeight);
+            default:
+                throw new IllegalArgumentException("invalid symmetry: " + symmetry);
+        }
+    }
+
 
     // private functions
 

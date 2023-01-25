@@ -17,6 +17,11 @@ public class Launcher extends Robot {
     boolean inCombatPos = false; // if it reached combat position
     boolean followCombatArea = false; // if this robot follows the combat area
 
+    /**
+     * {@code 0} for horizontal, {@code 1} for vertical, {@code 2} for rotational
+     */
+    int symmetryUsed;
+
     public void tryMoveToCombatArea() throws GameActionException {
         if (!followCombatArea) return;
         if (MemoryCache.sizeBySec(rc, MemorySection.COMBAT) >= 1) {
@@ -73,13 +78,31 @@ public class Launcher extends Robot {
                         occupied = true;
                     }
                 } else if (randNum < 0.55) {
-                    List<Integer> headquarters = MemorySection.ENEMY_HQ.readSection(rc);
-                    if (headquarters.size() > 0) {
+
+                    List<Integer> enemyHQs = MemorySection.ENEMY_HQ.readSection(rc);
+
+                    if (enemyHQs.size() > 0) {
+
                         bindTo =
-                                MemoryAddress.toLocation(headquarters.get(Math.abs(random.nextInt()) % headquarters.size()));
+                                MemoryAddress.toLocation(enemyHQs.get(Math.abs(random.nextInt()) % enemyHQs.size()));
                         state = 1;
                         occupied = true;
+
+                    } else {
+
+                        // randomly select a symmetry type to use
+                        symmetryUsed = random.nextInt(3);
+
+                        // randomly select one of our HQs to perform symmetry on
+                        List<Integer> ourHQs = MemorySection.HQ.readSection(rc);
+                        MapLocation selectedHQLocation = MemoryAddress.toLocation(ourHQs.get(random.nextInt(ourHQs.size())));
+
+                        bindTo = Map.reflect(selectedHQLocation, rc.getMapWidth(), rc.getMapHeight(), symmetryUsed);
+                        state = 1;
+                        occupied = true;
+
                     }
+
                 } else if (randNum < 0.9) {
                     List<Integer> skyIsland = MemorySection.SKY_ISLAND.readSection(rc);
                     if (skyIsland.size() > 0) {
