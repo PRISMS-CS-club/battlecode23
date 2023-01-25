@@ -20,7 +20,7 @@ public class Launcher extends Robot {
     /**
      * {@code 0} for horizontal, {@code 1} for vertical, {@code 2} for rotational
      */
-    int symmetryUsed;
+    int symmetryUsed = -1;
 
     public void tryMoveToCombatArea() throws GameActionException {
         if (!followCombatArea) return;
@@ -73,7 +73,7 @@ public class Launcher extends Robot {
                     List<Integer> headquarters = MemorySection.HQ.readSection(rc);
                     if (headquarters.size() > 0) {
                         bindTo =
-                                MemoryAddress.toLocation(headquarters.get(Math.abs(random.nextInt()) % headquarters.size()));
+                                MemoryAddress.toLocation(headquarters.get(random.nextInt(headquarters.size())));
                         state = 1;
                         occupied = true;
                     }
@@ -84,20 +84,7 @@ public class Launcher extends Robot {
                     if (enemyHQs.size() > 0) {
 
                         bindTo =
-                                MemoryAddress.toLocation(enemyHQs.get(Math.abs(random.nextInt()) % enemyHQs.size()));
-                        state = 1;
-                        occupied = true;
-
-                    } else {
-
-                        // randomly select a symmetry type to use
-                        symmetryUsed = random.nextInt(3);
-
-                        // randomly select one of our HQs to perform symmetry on
-                        List<Integer> ourHQs = MemorySection.HQ.readSection(rc);
-                        MapLocation selectedHQLocation = MemoryAddress.toLocation(ourHQs.get(random.nextInt(ourHQs.size())));
-
-                        bindTo = Map.reflect(selectedHQLocation, rc.getMapWidth(), rc.getMapHeight(), symmetryUsed);
+                                MemoryAddress.toLocation(enemyHQs.get(random.nextInt(enemyHQs.size())));
                         state = 1;
                         occupied = true;
 
@@ -110,9 +97,8 @@ public class Launcher extends Robot {
                         state = 1;
                         occupied = true;
                     }
-                } else {
-                    state = 5;
                 }
+
                 if (!occupied) {
                     state = 5;
                 }
@@ -123,14 +109,40 @@ public class Launcher extends Robot {
                 randomMove();
                 break;
             case 5:
-                bindTo = random.getRandLoc(rc);
-                rc.setIndicatorString("moving to randomly assigned location " + bindTo);
-                moveToward(bindTo);
-                tryMoveToCombatArea();
-                if (Map.diagonalDist(rc.getLocation(), bindTo) < 3) {
-                    //// bindTo = null;
-                    state = 3;
+
+                // get to-be-verified symmetries
+                // TODO: do verification every round to stop robots from going to proven invalid symmetries
+                int statusAddress = rc.readSharedArray(MemorySection.IDX_GAME_STAT);
+                List<Integer> symmetries = new ArrayList<>();
+                for (int i = 0; i < 3; i++) {
+                    if (((1 << (14 - i)) & statusAddress) == 0)
+                        symmetries.add(i);
                 }
+
+                if (symmetries.size() == 0) {
+                    bindTo = random.getRandLoc(rc);
+                    rc.setIndicatorString("moving to randomly assigned location " + bindTo);
+                    moveToward(bindTo);
+                    tryMoveToCombatArea();
+                    if (Map.diagonalDist(rc.getLocation(), bindTo) < 3) {
+                        //// bindTo = null;
+//                        state = 3;
+                        state = 0;
+                    }
+                    break;
+                }
+
+                // randomly select a symmetry type to use
+                symmetryUsed = symmetries.get(random.nextInt(symmetries.size()));
+
+                // randomly select one of our HQs to perform symmetry on\
+                // TODO: only go to enemy HQs that haven't been discovered/verified yet
+                List<Integer> ourHQs = MemorySection.HQ.readSection(rc);
+                MapLocation selectedHQLoc = MemoryAddress.toLocation(ourHQs.get(random.nextInt(ourHQs.size())));
+
+                bindTo = Map.reflect(selectedHQLoc, rc.getMapWidth(), rc.getMapHeight(), symmetryUsed);
+                state = 1;
+
                 break;
             case 1:
                 rc.setIndicatorString("Targeting to " + bindTo.x + ", " + bindTo.y);
@@ -138,6 +150,11 @@ public class Launcher extends Robot {
                     RobotInfo robot = rc.senseRobotAtLocation(bindTo);
                     if (robot != null && robot.getType() == RobotType.HEADQUARTERS && robot.getTeam() == rc.getTeam().opponent()) {
                         state = 2;
+                    } else if (symmetryUsed != -1) {
+                        // this symmetry is invalid
+                        MemoryCache.invalidSymmetry = symmetryUsed;
+                        symmetryUsed = -1;
+                        state = 0;
                     } else {
                         state = 3;
                         inCombatPos = true;

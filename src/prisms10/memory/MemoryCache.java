@@ -9,6 +9,7 @@ public class MemoryCache {
 
     //    static Set<Integer> locationsToWrite = new HashSet<>(); // Every important location that is scheduled to record into shared memory
     public static HashMap<MemorySection, Set<Integer>> locsToWrite = new HashMap<>();
+    public static int invalidSymmetry = -1;
 
     static {
         for (MemorySection type : MemorySection.values()) {
@@ -32,13 +33,32 @@ public class MemoryCache {
     }
 
     public static void writeBackLocs(RobotController rc) throws GameActionException {
-        // check different types of locs, and write them back into shared mem
+
+        if (invalidSymmetry != -1) {
+            int indicatorBit = 1 << (14 - invalidSymmetry);
+            int prevAddress = rc.readSharedArray(MemorySection.IDX_GAME_STAT);
+            int newAddress = prevAddress | indicatorBit;
+            if (prevAddress != newAddress) {
+                if (rc.canWriteSharedArray(MemorySection.IDX_GAME_STAT, newAddress)) {
+                    rc.writeSharedArray(MemorySection.IDX_GAME_STAT, newAddress);
+                    invalidSymmetry = -1;
+                }
+            } else {
+                invalidSymmetry = -1;
+            }
+        }
+
+        // check different types of locations, and write them back into shared mem
+
         for (MemorySection type : MemorySection.values()) {
+
             int st = type.getStartIdx();
             int ed = type.getEndIdx();
+
             Set<Integer> locs = locsToWrite.get(type);
             assert locs != null : "locationsToWrite should be initialized in static block";
             Iterator<Integer> it = locs.iterator();
+
             while (it.hasNext()) {
                 int loc = it.next();
                 int empPos;
@@ -55,6 +75,7 @@ public class MemoryCache {
                 }
             }
         }
+
     }
 
     /**
