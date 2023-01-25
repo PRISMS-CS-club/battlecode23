@@ -95,9 +95,9 @@ public class Launcher extends Robot {
 
                         // randomly select one of our HQs to perform symmetry on
                         List<Integer> ourHQs = MemorySection.HQ.readSection(rc);
-                        MapLocation selectedHQLocation = MemoryAddress.toLocation(ourHQs.get(random.nextInt(ourHQs.size())));
+                        MapLocation selectedHQLoc = MemoryAddress.toLocation(ourHQs.get(random.nextInt(ourHQs.size())));
 
-                        bindTo = Map.reflect(selectedHQLocation, rc.getMapWidth(), rc.getMapHeight(), symmetryUsed);
+                        bindTo = Map.reflect(selectedHQLoc, rc.getMapWidth(), rc.getMapHeight(), symmetryUsed);
                         state = 1;
                         occupied = true;
 
