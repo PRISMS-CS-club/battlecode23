@@ -25,16 +25,16 @@ public class Headquarters extends Robot {
 
     @Override
     public void run() throws GameActionException {
-        // initialize
+        // initialize memory section
         if ((rc.readSharedArray(MemorySection.IDX_GAME_STAT) & 0x8000) == 0) {
             rc.writeSharedArray(MemorySection.IDX_GAME_STAT, 0x8000);
             // initialize shared memory
             for (int i = 0; i < MemorySection.IDX_COMBAT_END; i++) {
                 rc.writeSharedArray(i, MemoryAddress.MASK_COORDS);
             }
-            // initialize nearby well info
-            super.run();
         }
+        // scan nearby info
+        super.run();
         // record the current headquarters' position into shared memory
         int currentLocation = MemoryAddress.fromLocation(rc.getLocation());
         for (int i = 8; i < 11; i++) {
